@@ -3,6 +3,14 @@ if(FALSE) {
   source("~/.Rprofile")
 }
 
+
+###########################################
+#THIS SCRIPT HAS NOT BEEN TESTED AND 
+#PROBABLY DOESN'T WORK
+###########################################
+
+
+
 ###########################################
 #this script loads simulated covariate data,
 #uses those data to generate survival times,
@@ -259,6 +267,10 @@ l_ply(1:nreps, .parallel = T, function(.rep, .covariates, .n_subjects, .beta, .r
   
 }, covariates, n_subjects, beta, results_write_directory, sim_results_name)
 
+###########################################
+####GARBAGE BELOW
+###########################################
+
 #setwd("/Volumes/QSU/Datasets/PCORI/data simulation/data/Sim 9/")
 
 all_results <- read.table(file = "bootstrapResults.csv", stringsAsFactors = F, header = T, sep = ",")
@@ -284,19 +296,3 @@ summarized_results <- ldply(names(beta), function(.var, .all_results, .beta) {
                     stringsAsFactors = F)
   )}, all_results, beta)
 summarized_results
-
-
-
-names(beta)[13]
-
-
-
-summary(coxph(Surv(t0, t, d_none) ~  z1 + z2, data = subject_data))$coef[ ,c(1,3,5)]
-
-data_none[1,]
-names(data_none) <- c('id','z1','z2','t','t0','d_none')
-
-
-source_url('https://raw.github.com/kikapp/GeneralRScripts/master/MiscellaneousRFunctions.R')
-
-
