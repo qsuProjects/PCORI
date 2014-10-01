@@ -5,13 +5,6 @@ if(FALSE) {
 
 
 ###########################################
-#THIS SCRIPT HAS NOT BEEN TESTED AND 
-#PROBABLY DOESN'T WORK
-###########################################
-
-
-
-###########################################
 #this script loads simulated covariate data,
 #uses those data to generate survival times,
 #merges those survival times with covariate data,
@@ -39,8 +32,6 @@ require(msm)
 require(survival)
 require(plyr)
 
-setwd("/Volumes/QSU/Datasets/PCORI/data simulation/data/Sim 9/")
-
 #load data
 covariates <- read.table(file = covariate_data_path, sep = ",", header = T, stringsAsFactors = F)
 
@@ -51,6 +42,12 @@ covariates$race_other <- 0
 covariates$race_black[covariates$racecatexp == 1] <- 1
 covariates$race_other[covariates$racecatexp == 2] <- 1
 
+#make age constant for each subject
+covariates <- ddply(covariates, .(id), function(.df) {
+  .df$age <- .df$age[1]
+  return(.df)
+})
+
 #determine how many subjects are in the data
 n_subjects <- length(unique(covariates$id))
 
@@ -59,15 +56,14 @@ require(doSNOW)
 cl<-makeCluster(number_cores)
 registerDoSNOW(cl)
 
-n_clusters
+number_cores
 getDoParWorkers()
 
-clusterApply(cl, seq(along=cl), function(.id, .results_write_directory, .sim_results_name) {
+clusterApply(cl, seq(along=cl), function(.id, .results_write_directory, .sim_results_name, .the_seed) {
   WORKER.ID <<- paste0("core_", .id)
-  set.seed(the_seed*(.id^8))
-  cat("coef,se,p,var,type,rep\n", file = paste0(.results_write_directory, "/", WORKER.ID, "_", .sim_results_name, ".csv"), append = F)
-}, results_write_directory, sim_results_name)
-
+  set.seed(.the_seed*(2^.id))
+  cat("coef,se,p,var,type,proportion_censored,rep\n", file = paste0(.results_write_directory, "/", WORKER.ID, "_", .sim_results_name, ".csv"), append = F)
+}, results_write_directory, sim_results_name, the_seed)
 
 l_ply(range_low:range_high, .parallel = T, function(.rep, .covariates, .n_subjects, .beta, .results_write_directory, .sim_results_name, .log_write_directory) {
   
@@ -75,7 +71,6 @@ l_ply(range_low:range_high, .parallel = T, function(.rep, .covariates, .n_subjec
   require(msm)
   require(survival)
   require(plyr)
-  require(MBESS)
   
   #generate time-dependent lambda
   .covariates <- .covariates[ , c(names(.beta), "id")]
@@ -98,11 +93,11 @@ l_ply(range_low:range_high, .parallel = T, function(.rep, .covariates, .n_subjec
     ((1/.lambda)*x)^(1/.nu)
   }
   .g_inv <- function(x){
-    lambda*(x^.nu)
+    .lambda*(x^.nu)
   }  
   
   .t <- 1:350
-  .t_diff <- (t[-1] - t[1:(length(.t) - 1)])[-(length(.t) - 1)]
+  .t_diff <- (.t[-1] - .t[1:(length(.t) - 1)])[-(length(.t) - 1)]
   .g_inv_t <- .g_inv(.t)
   .g_inv_t_diff <- (.g_inv(.t[-1]) - .g_inv(.t[1:(length(.t) - 1)]))[-(length(.t) - 1)]
   
@@ -110,8 +105,8 @@ l_ply(range_low:range_high, .parallel = T, function(.rep, .covariates, .n_subjec
   .t_max <- 350
   .t_min <- 20
   
-  .g_inv_t_max <- .g_inv(t_max)
-  .g_inv_t_min <- .g_inv(t_min)
+  .g_inv_t_max <- .g_inv(.t_max)
+  .g_inv_t_min <- .g_inv(.t_min)
   
   
   #K function applies ACCEPT-REJECT algorithm
@@ -122,9 +117,6 @@ l_ply(range_low:range_high, .parallel = T, function(.rep, .covariates, .n_subjec
   #define survival time generation function
   .gen_y <- function(.x, .g_inv_t,  .g_inv_t_min, .g_inv_t_max) {
     .x1 <- .x$xB
-    #   print(length(.x$xB))
-    #   print(length(.g_inv_t))
-    .d <- ppexp(.g_inv_t_max, .x1, .g_inv_t) - ppexp(.g_inv_t_min, .x1, .g_inv_t)
     .M <- 1 / .d
     .r <- 60
     .count<-0
@@ -133,7 +125,7 @@ l_ply(range_low:range_high, .parallel = T, function(.rep, .covariates, .n_subjec
       .count <- .count+1
       .y <- rpexp(.r, .x1, .g_inv_t)
       .u <- runif(.r)
-      .t <- .M * (k(.y, .g_inv_t_min, .g_inv_t_max, .x1, .g_inv_t) / .d / dpexp(.y, .x1, .g_inv_t))
+      .t <- .M * (.k(.y, .g_inv_t_min, .g_inv_t_max, .x1, .g_inv_t) / .d / dpexp(.y, .x1, .g_inv_t))
       .y <- .y[.u <= .t][1]
       if (!is.na(.y)) {break}
     }
@@ -144,14 +136,14 @@ l_ply(range_low:range_high, .parallel = T, function(.rep, .covariates, .n_subjec
   .survival_times <- ldply(.covars_list, .gen_y, .g_inv_t,  .g_inv_t_min, .g_inv_t_max)
   cat(paste0("Survival times generated for rep ", .rep, " at ", Sys.time(), "\n"), file = paste0(.log_write_directory, "/", WORKER.ID, ".txt"), append = T)
   
-  .survival_times$g.y <- g(.survival_times[ ,2])
+  .survival_times$g_y <- .g(.survival_times[ ,2])
   
   if (sum(is.na(.survival_times$V1)) == 0) {
     
     #create uncensored model-ready dataset
-    .data_none <-  ldply(1:.n_subjects, function(..subject, ..survival_times, ..covariates) {
+    .data_none <-  ldply(1:.n_subjects, function(..subject, ..survival_times, ..covars_list) {
       ..survival_time <- ceiling(..survival_times$g_y[..subject])
-      ..to_return <- ..covariates[[..subject]]
+      ..to_return <- ..covars_list[[..subject]][1:..survival_time, ]
       ..to_return$id <- ..subject
       ..to_return$t <- c(1:..survival_time)
       ..to_return$t0 <- 0:(..survival_time - 1)
@@ -160,27 +152,27 @@ l_ply(range_low:range_high, .parallel = T, function(.rep, .covariates, .n_subjec
       
       return(..to_return)
       
-    }, .survival_times, .covariates)
+    }, .survival_times, .covars_list)
     
     cat(paste0("Uncensored data set generated for rep ", .rep, " at ", Sys.time(), "\n"), file = paste0(.log_write_directory, "/", WORKER.ID, ".txt"), append = T)
     
     #create randomly censored model-ready dataset
-    .data_censored <-  llply(1:3, function(..censor, ..survival_times, ..covariates, ..n_subjects) {
+    .data_censored <-  llply(1:3, function(..censor, ..survival_times, ..covars_list, ..n_subjects) {
       ..proportion_censored <- c(0.2, 0.5, 0.8)[..censor]
       ..events <- rbinom(.n_subjects, size = 1, p = (1 - ..proportion_censored) )
       
-      ldply(1:..n_subjects, function(...subject, ...survival_times, ...covariates, ...events, ...proportion_censored) {
+      ldply(1:..n_subjects, function(...subject, ...survival_times, ...covars_list, ...events, ...proportion_censored) {
         ...survival_time <- ceiling(...survival_times$g_y[...subject])
-        ...to_return <- ...covariates[[...subject]]
+        ...to_return <- ...covars_list[[...subject]][1:...survival_time, ]
         ...to_return$id <- ...subject
         ...to_return$t <- c(1:...survival_time)
         ...to_return$t0 <- 0:(...survival_time - 1)
         ...to_return$d <- ...events[...subject]
         ...to_return$proportion_censored = ...proportion_censored
-        return(...to_return, ..proportion_censored)
+        return(...to_return)
         
-      }, ..survival_times, ..covariates, ..events)
-    }, .survival_times, .covariates, .n_subjects)
+      }, ..survival_times, ..covars_list, ..events, ..proportion_censored)
+    }, .survival_times, .covars_list, .n_subjects)
     
     cat(paste0("Censored data sets generated for rep ", .rep, " at ", Sys.time(), "\n"), file = paste0(.log_write_directory, "/", WORKER.ID, ".txt"), append = T)
     
@@ -188,8 +180,8 @@ l_ply(range_low:range_high, .parallel = T, function(.rep, .covariates, .n_subjec
     .uncensored_results <- list()
     
     #fit uncensored models
-    .cox_formula <- as.formula(paste0("Surv(t0, t, d_none) ~ ", paste0(names(.beta), collapse = " + ")))
-    .unpooled_cox_results <- data.frame(summary(coxph(.cox_formula, data = .data_none))$coef[ ,c(1,3,5)])
+    .unpooled_cox_formula <- as.formula(paste0("Surv(t0, t, d) ~ ", paste0(names(.beta), collapse = " + ")))
+    .unpooled_cox_results <- data.frame(summary(coxph(.unpooled_cox_formula, data = .data_none))$coef[ ,c(1,3,5)])
     names(.unpooled_cox_results) <- c("coef", "se", "p")
     .unpooled_cox_results$var <- row.names(.unpooled_cox_results)
     .unpooled_cox_results$type <- "Unpooled Cox"
@@ -197,14 +189,14 @@ l_ply(range_low:range_high, .parallel = T, function(.rep, .covariates, .n_subjec
     
     .uncensored_results[[1]] <- .unpooled_cox_results
     
-    .pooled_cox_formula <- as.formula(paste0("Surv(t0, t, d_none) ~ ", paste0(names(.beta), collapse = " + "), " + cluster(id) "))
+    .pooled_cox_formula <- as.formula(paste0("Surv(t0, t, d) ~ ", paste0(names(.beta), collapse = " + "), " + cluster(id) "))
     .pooled_cox_results <- data.frame(summary(coxph(.pooled_cox_formula, data = .data_none), )$coef[ ,c(1,4,6)])
     names(.pooled_cox_results) <- c("coef", "se", "p")
     .pooled_cox_results$var <- row.names(.pooled_cox_results)
     .pooled_cox_results$type <- "Pooled Cox"
     .pooled_cox_results$proportion_censored <- 0
     
-    .uncensored_results[[1]] <- .pooled_cox_formula
+    .uncensored_results[[2]] <- .pooled_cox_results
     
     .uncensored_results <- ldply(.uncensored_results)
     
@@ -230,16 +222,17 @@ l_ply(range_low:range_high, .parallel = T, function(.rep, .covariates, .n_subjec
       ..pooled_cox_results$type <- "Pooled Cox"
       ..pooled_cox_results$proportion_censored <- ..proportion_censored
       
-      ..censored_results[[1]] <- ..pooled_cox_results
+      ..censored_results[[2]] <- ..pooled_cox_results
       
       ldply(..censored_results)
-    })
+    }, .unpooled_cox_formula, .pooled_cox_formula)
     
     cat(paste0("Censored models fit for rep ", .rep, " at ", Sys.time(), "\n"), file = paste0(.log_write_directory, "/", WORKER.ID, ".txt"), append = T)
     
-    to_write <- rbind(..uncensored_results, ..censored_results)
+    .to_write <- rbind(.uncensored_results, .censored_results)
+    .to_write$rep <- .rep
     
-    write.table(to_write, file = paste0(.results_write_directory, "/", WORKER.ID, "_", .sim_results_name, ".csv"), 
+    write.table(.to_write, file = paste0(.results_write_directory, "/", WORKER.ID, "_", .sim_results_name), 
                 append = T, row.names = F, col.names = F, sep = ",")
     
     cat(paste0("Results written for rep ", .rep, " at ", Sys.time(), "\n"), file = paste0(.log_write_directory, "/", WORKER.ID, ".txt"), append = T)
@@ -249,33 +242,3 @@ l_ply(range_low:range_high, .parallel = T, function(.rep, .covariates, .n_subjec
   }
   
 }, covariates, n_subjects, beta, results_write_directory, sim_results_name, log_write_directory)
-
-###########################################
-####GARBAGE BELOW
-###########################################
-
-#setwd("/Volumes/QSU/Datasets/PCORI/data simulation/data/Sim 9/")
-# 
-# all_results <- read.table(file = "bootstrapResults.csv", stringsAsFactors = F, header = T, sep = ",")
-# all_results$stat <- rep(c("coef", "se", "p"), n_subjects)
-# all_results[1,]
-# 
-# 
-# 
-# 
-# summarized_results <- ldply(names(beta), function(.var, .all_results, .beta) {
-#   .estimates <- .all_results[.all_results$stat == "coef", ]
-#   .ses <- .all_results[.all_results$stat == "se", ]
-#   .ps <- .all_results[.all_results$stat == "p", ]
-#   
-#   return(data.frame(var = .var,
-#                     true = round(.beta[[.var]], 4),
-#                     mean_estimate = mean(.estimates[[.var]], na.rm = T),
-#                     n_converge = sum(!is.na(.estimates[[.var]])),
-#                     bias = mean(.estimates[[.var]], na.rm = T) - .beta[[.var]],
-#                     std_bias = 100 * (mean(.estimates[[.var]], na.rm = T) - .beta[[.var]]) / mean(.ses[[.var]], na.rm = T),
-#                     mse = mean( (mean(.estimates[[.var]], na.rm = T) - .beta[[.var]])^2),
-#                     reject_prob = mean(.ps[[.var]] < 0.05, na.rm = T),
-#                     stringsAsFactors = F)
-#   )}, all_results, beta)
-# summarized_results
