@@ -29,3 +29,7 @@ To address the implications of methodological choices for handling missing data 
 This code is a work in progress and is provided as-is. More comprehensive documentation should be forthcoming.
 
 Questions should be directed to [Kristopher Kapphahn](https://med.stanford.edu/profiles/kristopher-kapphahn).
+
+## About the Subfolders
+
+-IMPMISS: Contains code to generate auxiliary variables and use them to impose missingness. 
