@@ -51,8 +51,38 @@ d.miss = impose_missingness( data=data, outcome.name="d", start.time.name="t0",
 
 # refit models that created missingness to see how we're doing
 # looks good!
-summary( glm( is.na(bmi) ~ aux.etiol + time2event + d, data=d.miss, family=binomial(link="logit") ) ) 
+#summary( glm( is.na(bmi) ~ aux.etiol + time2event + d, data=d.miss, family=binomial(link="logit") ) ) 
 
+
+##### Did We Hit Individual Variable Missingness Targets? #####
+
+# compare probability of missingness for VLN at baseline vs. overall
+first.dat = d.miss[!duplicated(d.miss$id),]
+prop.table( table( is.na(first.dat$log_vln) ) )  # at baseline
+
+# compare probability of missingness for CD4 at baseline vs. overall
+prop.table( table( is.na(first.dat$cd4) ) )  # at baseline
+
+# compare probability of missingness for LDL at baseline vs. overall
+prop.table( table( is.na(first.dat$ldl) ) )  # at baseline
+
+
+##### Did We Hit Global Missingness Targets? #####
+
+# proportion of observations missing at least 1 variable
+# want 84%
+d.miss$row.has.missing = ( is.na(d.miss$bmi) | is.na(d.miss$log_vln) | is.na(d.miss$ldl) | 
+                          is.na(d.miss$hdl) | is.na(d.miss$cd4) )
+prop.table( table(d.miss$row.has.missing) )
+
+# proportion of subjects where each observation is missing at least 1 variable 
+# want 18%
+gets.dropped = c()
+for (i in unique(d.miss$id) ) {
+  gets.dropped[i] = all( d.miss$row.has.missing[d.miss$id==i] )
+}
+
+prop.table(table(gets.dropped))
 
 
 ########################## WRAPPER FUNCTION: IMPOSE MISSINGNESS ##########################
