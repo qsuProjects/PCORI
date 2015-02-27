@@ -21,15 +21,6 @@
 #  the variable to be made missing
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-########################## BOOKMARKS :) ##########################
-
-# HAD FIDDLED WITH PARAMETERS FOR MISSING INDICATORS AND GOT REASONABLE RESULTS FOR BMI. 
-# NEED TO DO SAME FOR OTHER MISSING INDICATORS. MAYBE CHECK IF WE CARE ABOUT ACTUAL VALUES OF AUX VARS FIRST.
-
-# TO DO:
-# 1. See how it's doing by refitting missingness model
-# 2. Make option in wrapper function to also override any variable with the original variable name in it
-
 
 ########################## READ IN DATA ##########################
 
@@ -43,12 +34,16 @@ setwd("~/Dropbox/QSU/Mathur/PCORI/impose_missingness/Data from KK")
 data = read.csv("SURV_2015-02-01_job_10_dataset_1.csv")
 
 setwd("~/Dropbox/QSU/Mathur/PCORI/impose_missingness")
-aux.matrix = read.csv("aux_var_parameters_matrix.csv")
-#miss.matrix = read.csv("missing_var_parameters_matrix_v2.csv")
-miss.matrix = read.csv("missing_var_parameters_matrix_v3.csv")
+aux.matrix = read.csv("aux_var_parameters_matrix_v2.csv")
+miss.matrix = read.csv("missing_var_parameters_matrix_v4.csv")
 
 
 ########################## TEST PERFORMANCE ##########################
+
+
+#data=data; outcome.name="d"; start.time.name="t0";
+#stop.time.name="t"; id.var.name="id"; aux.matrix=aux.matrix;
+#miss.matrix=miss.matrix; make.relateds.missing=TRUE
 
 d.miss = impose_missingness( data=data, outcome.name="d", start.time.name="t0",
                              stop.time.name="t", id.var.name="id", aux.matrix=aux.matrix,
@@ -168,18 +163,33 @@ make_one_aux_var = function( data, aux.var.name, aux.matrix ) {
   # pull out intercept
   intercept = aux.matrix$beta[ aux.matrix$aux.var==aux.var.name & aux.matrix$parameter=="intercept" ]
   
-  # random error vector
-  error.SD = matrix2$error.SD[1]  # use just first entry since constant within an aux variable
-  errors = rnorm(n=n.obs, mean=0, sd=error.SD )
+  # pull out model type (linear or logistic)
+  model = as.character( aux.matrix$model[ aux.matrix$aux.var==aux.var.name ][1] )
   
-  # start with just error term and intercept
-  # vector same length as dataset
-  values = errors + intercept
-  
-  # for each parameter, multiply it by corresponding beta and add to values vector
+  # calculate linear predictor, not including any error term
+  linear.pred = intercept
   for (p in matrix2$parameter) {
     beta = matrix2$beta[ matrix2$parameter==p ]  # beta is length 1; recycled
-    values = values + ( data[[p]] * beta )  
+    linear.pred = linear.pred + ( data[[p]] * beta )  # linear predictor (no error term yet)
+  }
+  
+  # if auxiliary variable is built according to a linear model
+  if (model == "linear") {
+    # random error vector
+    error.SD = matrix2$error.SD[1]  # use just first entry since constant within an aux variable
+    errors = rnorm(n=n.obs, mean=0, sd=error.SD )
+    
+    # observed values
+    values = linear.pred + errors
+  } 
+  
+  # if auxiliary variable is built according to a logistic model 
+  if (model == "logistic") {
+    # calculate probability of missingness, pi
+    pi = exp(linear.pred) / (1 + exp(linear.pred))
+    
+    # observed values (Bernouilli trials)
+    values = rbinom(n=n.obs, size=1, p=pi)
   }
   
   # put new variable in dataframe
@@ -219,9 +229,7 @@ make_one_missing_indic = function( data, miss.var.name, miss.matrix ) {
     beta = matrix2$beta[ matrix2$parameter==p ]  # beta is length 1; recycled
     linear.pred = linear.pred + ( data[[p]] * beta )  
   }
-  
-  # browser()
-  
+
   # calculate probability of missingness, pi
   pi = exp(linear.pred) / (1 + exp(linear.pred))
   
@@ -229,7 +237,7 @@ make_one_missing_indic = function( data, miss.var.name, miss.matrix ) {
   values = rbinom(n=n.obs, size=1, p=pi)
   
   # print proportion missing and non-missing
-  prop.missing = round( as.numeric( prop.table( table(values) ) )[2], 3 )
+  prop.missing = length(values[values==1]) / length(values)
   cat( "\nProportion of observations made missing for", miss.var.name, ":", prop.missing )
   
   # put in dataframe
