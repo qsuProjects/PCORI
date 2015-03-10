@@ -1,62 +1,107 @@
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Project: PCORI Missing Data
-# 
-# -This program creates covariates for simulated data based on existing VA data 
-#    (summary stats provided by Vilija at VA, see Q:\Datasets\PCORI\data simulation\real data estimates)
-#
-# -Using jointly_generate_binary_normal (binNor package) function by Demirtas, simulate clinical characterisitics and drug exposure for
-#  a large number of patients over time.
-#
-# -This file runs the simulation and looks at performance.
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~s
 
+# this code is from Sim 25
 
-######################### SIMULATION TEMPLATE #########################
+######################### RUN IN PARALLEL #########################
 
+# load command line arguments
+args = commandArgs(trailingOnly = TRUE)
+print(args)
 
-n=
-obs=
-n.Drugs=15
-n.Reps=
+# the number of clusters to use
+n_clusters = as.numeric(args[1])
 
-t1 = Sys.time()
-results = repeat_sim(n, obs, pps=pps, pps.target=pps, pmeans=pmeans, pmeans.target=pmeans, n.Drugs, pcor, wcorin, pvars, n.Reps, varnames, write.data=FALSE)
-t2 = Sys.time()
+# name prefix for datasets
+name_prefix = args[2]
 
-# time to complete simulation
-t2 - t1
+# n (number of subjects)
+( llama  = as.numeric(args[3]) )
 
-mean_results = mean_performance(results)
+# obs (number of observations per subject)
+obs = as.numeric(args[4])
+
+# n.Reps (number of datasets that each worker should generate)
+n.Reps = as.numeric(args[5])
+
+# n.Drugs (number of drug variables)
+n.Drugs = as.numeric(args[6])
 
 
 
-######################### PLOT PERFORMANCE #########################
+# load required libraries
+library(plyr)
+library(doSNOW)
 
-# extract variable names
-normal.names <- varnames[ (n.OtherBins + n.Drugs + 2) : (n.OtherBins + n.Drugs + 1 + n.OtherNorms) ]
-other.bin.names <- varnames[ 2 : (1 + n.OtherBins) ]
-drug.names <- varnames[ (n.OtherBins + 2) : (n.OtherBins + 1 + n.Drugs) ]
+#set up parallelization backend
+cl = makeCluster(n_clusters)
+registerDoSNOW(cl)
 
+#these should be equal
+n_clusters
+getDoParWorkers()
 
-# make performance plots
-par(mfrow=c(1,3))
-
-plotBias(results$nor.vars$abs.bias, normal.names, ylim=c(-15,15), yaxp=c(-15,15,10), ylab="Absolute bias", main="Normal Variables")
-plotBias(results$nor.vars$std.bias, normal.names, ylim = c(-3,3), yaxp=c(-3,3,6), ylab="Bias/SE", main = paste("n=", n, ", obs=", obs, ", reps=", n.Reps) )
-plotCoverage(results$nor.vars$coverage, n.Reps=50, normal.names, main=Sys.Date() )
-
-plotBias(results$drug.evers$abs.bias, drug.names, ylim=c(-1,1), yaxp=c(-1,1,4), ylab="Absolute bias", main="Drug Ever-Use")
-plotBias(results$drug.evers$std.bias, drug.names, ylim=c(-6,6), yaxp=c(-6,6,6), ylab="Bias/SE", main=paste("n=", n, ", obs=", obs, ", reps=", n.Reps) )
-plotCoverage(results$drug.evers$coverage, n.Reps=50, drug.names, main=Sys.Date() )
-
-plotBias(results$prop.drug.time$abs.bias, drug.names, ylim=c(-.1,.1), yaxp=c(-.1,.1,8), ylab="Absolute bias", main="Proportion Drug Time")
-plotBias(results$prop.drug.time$std.bias, drug.names, ylim=c(-10,10), yaxp=c(-10,10,10), ylab="Bias/SE", main=paste("n=", n, ", obs=", obs, ", reps=", n.Reps) )
-plotCoverage(results$prop.drug.time$coverage, n.Reps=50, drug.names, main=Sys.Date() )
-
-plotBias(results$prop.male$abs.bias, other.bin.names, ylab="Absolute bias", main="Male")
-plotBias(results$prop.male$std.bias, other.bin.names, ylim=c(-3,3), ylab="Bias/SE", main="Male")
-plotCoverage(results$prop.male$coverage, n.Reps=50, other.bin.names)
+#give each worker an ID 
+#this is optional, but occasionally is useful 
+#in situations where you need workers to write data
+#every worker writing to the same file will result in 
+#uncaught errors and partially overwritten data
+#worker ids enable each worker to write to its own set of 
+#files
+clusterApply(cl, seq(along=cl), function(id) WORKER.ID <<- paste0("worker_", id))
 
 
-par(mfrow=c(1,1))
+#example:
+#each worker here runs a t test on simulated data and
+#writes to a worker-specific file
+
+time = system.time({
+
+# EDITED TO PASS THE SBATCH ARGUMENTS ALONG WITH .ITEM TO FUNCTION
+# AFTER DEBUGGING, REMOVE THE INFORM=T ARGUMENT! SLOWS THINGS DOWN!
+l_ply( c( 1:getDoParWorkers() ), .parallel=T, .inform=T, function(.item, .llama, .obs, .n.Reps, .n.Drugs) {  
+  #l_ply iterates through each element of its first argument, here c(1:1000), and passes each element to
+  #function() as .item    
+  #instead of c(1:1000), you could pass l_ply() a list where each element is a set of subject specific means
+  #then each worker/iteration would expand those means into a full set of data for that subject
+  #avoid workers writing to the same file
+  #if each worker/iteration generates data for one subject, you will also need to write code that stitches
+  #all subject data together into one data file.
+  
+  #everything in here will be performed by workers in parallel    
+  #packages and source functions used by workers should be loaded within the this block
+  
+
+	n=150
+	#obs=10
+	#n.Reps=1
+	#n.Drugs=15
+
+  # This alone works
+  setwd("/share/PI/manishad/sim_25_sher")
+  source("load_functions.R", local=TRUE)
+  source("init_variables.R", local=TRUE)
+
+	# DELETE THIS - testing only
+	write.csv(.llama, "llama.csv")
+  
+  # simulate results
+setwd("/share/PI/manishad/sim_25_sher/datasets")
+  results = repeat_sim(n=.llama, obs=.obs, parameters=parameters, prop.target=NULL, mean.target=NULL, n.Drugs=.n.Drugs, 
+                       pcor=pcor, wcorin=wcorin, n.Reps=.n.Reps, race.names=race.names, write.data=TRUE, WORKER.ID) 
+
+}, llama, obs, n.Reps, n.Drugs)
+
+})
+
+
+# write a file about the simulation parameters
+setwd("/share/PI/manishad/sim_25_sher/datasets")
+write(
+x = paste("There were ", getDoParWorkers(), " workers",
+          "\nDatasets were generated with n=", llama, ", obs=", obs, ", n.Reps=",
+          n.Reps, ", n.Drugs=", n.Drugs,
+          "\nThe entire process took ", time[3]/(60*60), " hours",
+          sep="" )
+, file="simulation_info.txt"
+)
+
 
