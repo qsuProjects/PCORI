@@ -1,6 +1,4 @@
 
-# this code is from Sim 25
-
 ######################### RUN IN PARALLEL #########################
 
 # load command line arguments
@@ -14,7 +12,7 @@ n_clusters = as.numeric(args[1])
 name_prefix = args[2]
 
 # n (number of subjects)
-( llama  = as.numeric(args[3]) )
+( .n.Subj  = as.numeric(args[3]) )
 
 # obs (number of observations per subject)
 obs = as.numeric(args[4])
@@ -57,7 +55,7 @@ time = system.time({
 
 # EDITED TO PASS THE SBATCH ARGUMENTS ALONG WITH .ITEM TO FUNCTION
 # AFTER DEBUGGING, REMOVE THE INFORM=T ARGUMENT! SLOWS THINGS DOWN!
-l_ply( c( 1:getDoParWorkers() ), .parallel=T, .inform=T, function(.item, .llama, .obs, .n.Reps, .n.Drugs) {  
+l_ply( c( 1:getDoParWorkers() ), .parallel=T, .inform=T, function(.item, .n.Subj, .obs, .n.Reps, .n.Drugs) {  
   #l_ply iterates through each element of its first argument, here c(1:1000), and passes each element to
   #function() as .item    
   #instead of c(1:1000), you could pass l_ply() a list where each element is a set of subject specific means
@@ -81,14 +79,14 @@ l_ply( c( 1:getDoParWorkers() ), .parallel=T, .inform=T, function(.item, .llama,
   source("init_variables.R", local=TRUE)
 
 	# DELETE THIS - testing only
-	write.csv(.llama, "llama.csv")
+	write.csv(.n.Subj, "n.Subj.csv")
   
   # simulate results
 setwd("/share/PI/manishad/sim_25_sher/datasets")
-  results = repeat_sim(n=.llama, obs=.obs, parameters=parameters, prop.target=NULL, mean.target=NULL, n.Drugs=.n.Drugs, 
+  results = repeat_sim(n=.n.Subj, obs=.obs, parameters=parameters, prop.target=NULL, mean.target=NULL, n.Drugs=.n.Drugs, 
                        pcor=pcor, wcorin=wcorin, n.Reps=.n.Reps, race.names=race.names, write.data=TRUE, WORKER.ID) 
 
-}, llama, obs, n.Reps, n.Drugs)
+}, n.Subj, obs, n.Reps, n.Drugs)
 
 })
 
@@ -97,7 +95,7 @@ setwd("/share/PI/manishad/sim_25_sher/datasets")
 setwd("/share/PI/manishad/sim_25_sher/datasets")
 write(
 x = paste("There were ", getDoParWorkers(), " workers",
-          "\nDatasets were generated with n=", llama, ", obs=", obs, ", n.Reps=",
+          "\nDatasets were generated with n=", n.Subj, ", obs=", obs, ", n.Reps=",
           n.Reps, ", n.Drugs=", n.Drugs,
           "\nThe entire process took ", time[3]/(60*60), " hours",
           sep="" )
