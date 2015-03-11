@@ -33,4 +33,5 @@ Questions should be directed to [Kristopher Kapphahn](https://med.stanford.edu/p
 ## About the Subfolders
 
 -GENCOV: Code to generate correlated covariates (binary drug indicators, continuous proportion of time on drug variables, normal variables, and categorical variables), with or without time effects within subjects
+
 -IMPMISS: Code to generate auxiliary variables and use them to impose missingness. 
