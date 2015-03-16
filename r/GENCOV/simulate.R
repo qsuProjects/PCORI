@@ -67,22 +67,19 @@ l_ply( c( 1:getDoParWorkers() ), .parallel=T, .inform=T, function(.item, .n.Subj
   #everything in here will be performed by workers in parallel    
   #packages and source functions used by workers should be loaded within the this block
   
+  # FOR SOME REASON THIS NEEDS TO BE SET GLOBALLY - WHY?
+	n=200
 
-	n=2000
-	#obs=200
-	#n.Reps=1
-	#n.Drugs=15
-
-  # This alone works
-  setwd("/share/PI/manishad/sim_28_sher")
-  source("load_functions.R", local=TRUE)
-  source("init_variables.R", local=TRUE)
+  setwd("/share/PI/manishad/genCov")
+	source("jointly_generate_binary_normal_modified_v2.R", local=TRUE)
+  source("loadFunctions.R", local=TRUE)
+  source("initializeVariables.R", local=TRUE)
 
 	# DELETE THIS - testing only
 	write.csv(.n.Subj, "n.Subj.csv")
   
   # simulate results
-setwd("/share/PI/manishad/sim_28_sher/datasets")
+  setwd("/share/PI/manishad/genCov/datasets")
   results = repeat_sim(n=.n.Subj, obs=.obs, parameters=parameters, prop.target=NULL, mean.target=NULL, n.Drugs=.n.Drugs, 
                        pcor=pcor, wcorin=wcorin, n.Reps=.n.Reps, race.names=race.names, write.data=TRUE, WORKER.ID) 
 
@@ -90,9 +87,7 @@ setwd("/share/PI/manishad/sim_28_sher/datasets")
 
 })
 
-
 # write a file about the simulation parameters
-setwd("/share/PI/manishad/sim_28_sher/datasets")
 write(
 x = paste("There were ", getDoParWorkers(), " workers",
           "\nDatasets were generated with n=", n.Subj, ", obs=", obs, ", n.Reps=",

@@ -7,4 +7,5 @@ system( "scp ~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/GENCOV/* mmathur@sherlock:/s
 system( "scp -r ~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/GENCOV/sbatch_files mmathur@sherlock:/share/PI/manishad/genCov" )
 
 # run them
-# sbatch 1.sbatch -p manishad
+# sbatch /share/PI/manishad/genCov/sbatch_files/2.sbatch -p manishad
+# sbatch 2.sbatch -p manishad

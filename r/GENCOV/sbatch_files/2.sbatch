@@ -1,16 +1,16 @@
 #!/bin/bash
 #################
 #set a job name  
-#SBATCH --job-name=job_1
+#SBATCH --job-name=job_2
 #################  
 #a file for job output, you can check job progress
-#SBATCH --output=rm_1.out
+#SBATCH --output=rm_2.out
 #################
 # a file for errors from the job
-#SBATCH --error=rm_1.err
+#SBATCH --error=rm_2.err
 #################
 #time you think you need; default is one hour
-#SBATCH --time=48:00:00
+#SBATCH --time=5:00:00
 #################
 #quality of service; think of it as job priority
 #SBATCH --qos=normal
@@ -30,7 +30,7 @@
 #################
 #task to run per node; each node has 16 cores
 # CHANGE TO 16 TO USE ALL CORES
-#SBATCH --ntasks=2
+#SBATCH --ntasks=1
 #################
 #SBATCH --cpus-per-task=1
 #now run normal batch commands
@@ -38,4 +38,4 @@
 ml load R
 
 # arguments: number of  workers, job title prefix, n, obs, n.Reps, n.Drugs
-srun R -f /share/PI/manishad/sim_28_sher/simulate.R --args 2 job_1 2000 200 1 15 /share/PI/manishad/sim_28_sher
+srun R -f /share/PI/manishad/genCov/simulate.R --args 1 job_2 200 2 1 15
