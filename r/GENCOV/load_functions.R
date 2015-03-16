@@ -20,7 +20,7 @@ library(miscTools)
 library(car)
 
 # load jointly generate function
-source("jointly_generate_binary_normal_modified_v2.R")
+# source("jointly_generate_binary_normal_modified_v2.R")
 
 
 ############################## FUNCTION: OVERRIDE DRUG PROBS ##############################

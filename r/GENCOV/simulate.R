@@ -72,8 +72,8 @@ l_ply( c( 1:getDoParWorkers() ), .parallel=T, .inform=T, function(.item, .n.Subj
 
   setwd("/share/PI/manishad/genCov")
 	source("jointly_generate_binary_normal_modified_v2.R", local=TRUE)
-  source("loadFunctions.R", local=TRUE)
-  source("initializeVariables.R", local=TRUE)
+  source("load_functions.R", local=TRUE)
+  source("init_variables.R", local=TRUE)
 
 	# DELETE THIS - testing only
 	write.csv(.n.Subj, "n.Subj.csv")
