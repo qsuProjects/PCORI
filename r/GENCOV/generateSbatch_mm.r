@@ -177,19 +177,18 @@ generateSbatch <- function(sbatch_params, runfile_path = NA, run_now = F) {
 
 
 # EDIT THIS LINE EACH TIME
-n.files = 1
+n.files = 63
 
 sbatch_params = data.frame(row)
 sbatch_params[2:n.files,] = row
 
 # EDIT THIS LINE EACH TIME
-path = "/share/PI/manishad/sim_29_sher/"
-#path = "~/Desktop"
+path = "/share/PI/manishad/sim_29_sher"
 
 jobname = paste("job", 1:n.files, sep="_")
 outfile = paste("rm_", 1:n.files, ".out", sep="")
 errorfile = paste("rm_", 1:n.files, ".err", sep="")
-write_path = paste(path, "/", 1:n.files, ".sbatch", sep="")
+write_path = paste(path, "/sbatch_files/", 1:n.files, ".sbatch", sep="")
 
 runfile_path = paste(path, "/testRunFile.R", sep="")
 
@@ -212,3 +211,13 @@ sbatch_params <- data.frame(jobname,
                     server_sbatch_path = NA)
                     
 generateSbatch(sbatch_params, runfile_path)
+
+
+
+# run them all
+# works
+setwd(write_path)
+for (i in 1:n.files) {
+  system( paste("sbatch ", i, ".sbatch -p manishad", sep="") )
+}
+

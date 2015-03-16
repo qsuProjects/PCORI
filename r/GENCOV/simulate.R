@@ -12,7 +12,7 @@ n_clusters = as.numeric(args[1])
 name_prefix = args[2]
 
 # n (number of subjects)
-( .n.Subj  = as.numeric(args[3]) )
+( n.Subj  = as.numeric(args[3]) )
 
 # obs (number of observations per subject)
 obs = as.numeric(args[4])
@@ -68,13 +68,13 @@ l_ply( c( 1:getDoParWorkers() ), .parallel=T, .inform=T, function(.item, .n.Subj
   #packages and source functions used by workers should be loaded within the this block
   
 
-	n=150
-	#obs=10
+	n=2000
+	#obs=200
 	#n.Reps=1
 	#n.Drugs=15
 
   # This alone works
-  setwd("/share/PI/manishad/sim_25_sher")
+  setwd("/share/PI/manishad/sim_28_sher")
   source("load_functions.R", local=TRUE)
   source("init_variables.R", local=TRUE)
 
@@ -82,7 +82,7 @@ l_ply( c( 1:getDoParWorkers() ), .parallel=T, .inform=T, function(.item, .n.Subj
 	write.csv(.n.Subj, "n.Subj.csv")
   
   # simulate results
-setwd("/share/PI/manishad/sim_25_sher/datasets")
+setwd("/share/PI/manishad/sim_28_sher/datasets")
   results = repeat_sim(n=.n.Subj, obs=.obs, parameters=parameters, prop.target=NULL, mean.target=NULL, n.Drugs=.n.Drugs, 
                        pcor=pcor, wcorin=wcorin, n.Reps=.n.Reps, race.names=race.names, write.data=TRUE, WORKER.ID) 
 
@@ -92,7 +92,7 @@ setwd("/share/PI/manishad/sim_25_sher/datasets")
 
 
 # write a file about the simulation parameters
-setwd("/share/PI/manishad/sim_25_sher/datasets")
+setwd("/share/PI/manishad/sim_28_sher/datasets")
 write(
 x = paste("There were ", getDoParWorkers(), " workers",
           "\nDatasets were generated with n=", n.Subj, ", obs=", obs, ", n.Reps=",

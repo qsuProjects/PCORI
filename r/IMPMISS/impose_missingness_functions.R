@@ -2,23 +2,19 @@
 # Project: PCORI Missing Data
 # Author: Maya Mathur 
 #
-# This program imposes missingness given simulated covariates and survival times.
-# This file loads the needed functions.
-#
-# Steps:
-#   1.) Create auxiliary variables related to cardio, HIV, and etiology variables.
+# This algorithm:
+#   1.) Creates auxiliary variables related to cardio, HIV, and etiology variables.
 #       These variables affect missingness. 
-#   2.) Randomly decide missingness for each variable as function of missingness. 
-#   3.) 
-#   4.) 
-#   5.)
-#   6.)
+#   2.) Creates missingness indicators as a function of the covariates and auxiliary variables.
+#   3.) Imposes missingness according to the missingess indicators.
 #
-# Outcome must be coded as 0/1
-# Everyone must have event (pre-censoring)
-# aux matrix must use var name "time2event" if it uses that as parameter
-# variables in missingness matrix must use name format "miss.myVar" where myVar is the name of
-#  the variable to be made missing
+# Usage notes:
+#   1.) Outcome must be coded as 0/1
+#   2.) Everyone must have event (pre-censoring)
+#   3.) Aux parameter matrix must use var name "time2event" if it uses that as parameter
+#   4.) Variables in missingness matrix must use name format "miss.myVar" where myVar is the name of
+#       the variable to be made missing.
+#   5.) For both parameter matrices, each variable must have a predictor variable called "intercept".
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
