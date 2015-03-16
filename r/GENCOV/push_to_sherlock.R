@@ -1,4 +1,6 @@
 # this pushes the files from local GitHub repo to Sherlock
+# Test at 4:43 pm
+
 
 # push all the individual files
 system( "scp ~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/GENCOV/* mmathur@sherlock:/share/PI/manishad/genCov" )
