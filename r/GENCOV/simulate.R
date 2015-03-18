@@ -68,7 +68,7 @@ l_ply( c( 1:getDoParWorkers() ), .parallel=T, .inform=T, function(.item, .n.Subj
   #packages and source functions used by workers should be loaded within the this block
   
   # FOR SOME REASON THIS NEEDS TO BE SET GLOBALLY - WHY?
-	n=200
+	n=2000
 
   setwd("/share/PI/manishad/genCov")
 	source("jointly_generate_binary_normal_modified_v2.R", local=TRUE)
@@ -89,7 +89,8 @@ l_ply( c( 1:getDoParWorkers() ), .parallel=T, .inform=T, function(.item, .n.Subj
 
 # write a file about the simulation parameters
 write(
-x = paste("There were ", getDoParWorkers(), " workers",
+x = paste( "Simulation ", name_prefix, " ended on ", Sys.Date(),
+           "\nThere were ", getDoParWorkers(), " workers",
           "\nDatasets were generated with n=", n.Subj, ", obs=", obs, ", n.Reps=",
           n.Reps, ", n.Drugs=", n.Drugs,
           "\nThe entire process took ", time[3]/(60*60), " hours",

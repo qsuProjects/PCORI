@@ -1,3 +1,5 @@
+# TEST AT 9:32
+
 
 sbatch_skeleton <- function() {
   return(
@@ -41,7 +43,6 @@ ml load R
 srun R -f PATH_TO_R_SCRIPT ARGS_TO_R_SCRIPT
 ")
 }
-
 
 
 generateSbatch <- function(sbatch_params, runfile_path = NA, run_now = F) {
@@ -166,9 +167,9 @@ generateSbatch <- function(sbatch_params, runfile_path = NA, run_now = F) {
     } 
     sbatches[[sbatch]] <- gen_batch
   }
-  if (!is.na(runfile_path)) {
-    cat(paste0(outfile_lines, collapse = "\n"), file = runfile_path)
-  }
+#  if (!is.na(runfile_path)) {
+#    cat(paste0(outfile_lines, collapse = "\n"), file = runfile_path)
+#  }
   if(run_now) { system(paste0("R -f ", runfile_path)) } 
   
   return(sbatches)
@@ -176,27 +177,31 @@ generateSbatch <- function(sbatch_params, runfile_path = NA, run_now = F) {
 
 
 
-# EDIT THIS LINE EACH TIME
-n.files = 63
+############### EDIT THIS PART EACH TIME ################
+n.files = 63  # number of sbatch files to generate
+folder_path = "/share/PI/manishad/genCov"
+#folder_path = "~/Desktop/delete"
+n.workers = 16
+n.Subj = 2000
+obs = 200
+n.Reps = 1
+n.Drugs = 15
 
-sbatch_params = data.frame(row)
-sbatch_params[2:n.files,] = row
+##########################################################
 
-# EDIT THIS LINE EACH TIME
-path = "/share/PI/manishad/sim_29_sher"
 
+runfile_path = paste(folder_path, "/testRunFile.R", sep="")
+write_path = paste(folder_path, "/sbatch_files/", 1:n.files, ".sbatch", sep="")
 jobname = paste("job", 1:n.files, sep="_")
 outfile = paste("rm_", 1:n.files, ".out", sep="")
 errorfile = paste("rm_", 1:n.files, ".err", sep="")
-write_path = paste(path, "/sbatch_files/", 1:n.files, ".sbatch", sep="")
-
-runfile_path = paste(path, "/testRunFile.R", sep="")
+args_to_r_script = paste("--args", n.workers, jobname, n.Subj, obs, n.Reps, n.Drugs, sep=" ")
 
 
 sbatch_params <- data.frame(jobname,
                     outfile,
                     errorfile,
-                    jobtime = "00:48:00",
+                    jobtime = "48:00:00",
                     quality = "normal",
                     node_number = 1,
                     mem_per_node = 32000,
@@ -204,8 +209,8 @@ sbatch_params <- data.frame(jobname,
                     user_email = "mmathur@stanford.edu",
                     tasks_per_node = 16,
                     cpus_per_task = 1,
-                    path_to_r_script = paste(path, "/simulate.R", sep=""),
-                    args_to_r_script = "16 job_1 2000 200 1 15 /share/PI/manishad/sim_29_sher",
+                    path_to_r_script = paste(folder_path, "/simulate.R", sep=""),
+                    args_to_r_script,
                     write_path,
                     stringsAsFactors = F,
                     server_sbatch_path = NA)
@@ -215,8 +220,8 @@ generateSbatch(sbatch_params, runfile_path)
 
 
 # run them all
-# works
-setwd(write_path)
+# run this after loading interactive R session in Sherlock
+setwd( paste(folder_path, "/sbatch_files", sep="") ); list.files()
 for (i in 1:n.files) {
   system( paste("sbatch ", i, ".sbatch -p manishad", sep="") )
 }
