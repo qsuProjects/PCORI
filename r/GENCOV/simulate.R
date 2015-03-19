@@ -1,5 +1,6 @@
 
 ######################### RUN IN PARALLEL #########################
+# 10:29
 
 # load command line arguments
 args = commandArgs(trailingOnly = TRUE)
@@ -53,9 +54,7 @@ clusterApply(cl, seq(along=cl), function(id) WORKER.ID <<- paste0("worker_", id)
 
 time = system.time({
 
-# EDITED TO PASS THE SBATCH ARGUMENTS ALONG WITH .ITEM TO FUNCTION
-# AFTER DEBUGGING, REMOVE THE INFORM=T ARGUMENT! SLOWS THINGS DOWN!
-l_ply( c( 1:getDoParWorkers() ), .parallel=T, .inform=T, function(.item, .n.Subj, .obs, .n.Reps, .n.Drugs) {  
+l_ply( c( 1:getDoParWorkers() ), .parallel=T, function(.item, .n.Subj, .obs, .n.Reps, .n.Drugs, .name_prefix) {  
   #l_ply iterates through each element of its first argument, here c(1:1000), and passes each element to
   #function() as .item    
   #instead of c(1:1000), you could pass l_ply() a list where each element is a set of subject specific means
@@ -76,16 +75,21 @@ l_ply( c( 1:getDoParWorkers() ), .parallel=T, .inform=T, function(.item, .n.Subj
   source("init_variables.R", local=TRUE)
 
 	# DELETE THIS - testing only
-	write.csv(.n.Subj, "n.Subj.csv")
+	#write.csv(.n.Subj, "n.Subj.csv")
   
   # simulate results
   setwd("/share/PI/manishad/genCov/datasets")
-  results = repeat_sim(n=.n.Subj, obs=.obs, parameters=parameters, prop.target=NULL, mean.target=NULL, n.Drugs=.n.Drugs, 
-                       pcor=pcor, wcorin=wcorin, n.Reps=.n.Reps, race.names=race.names, write.data=TRUE, WORKER.ID) 
+  results = repeat_sim(n=.n.Subj, obs=.obs, parameters=parameters, prop.target=NULL,
+                       mean.target=NULL, n.Drugs=.n.Drugs, 
+                       pcor=pcor, wcorin=wcorin, n.Reps=.n.Reps,
+                       race.names=race.names, write.data=TRUE,
+                       name_prefix= paste( name_prefix, WORKER.ID, sep="_" ) )
 
-}, n.Subj, obs, n.Reps, n.Drugs)
+}, n.Subj, obs, n.Reps, n.Drugs, name_prefix)
 
 })
+
+
 
 # write a file about the simulation parameters
 write(
@@ -94,7 +98,7 @@ x = paste("There were ", getDoParWorkers(), " workers",
           n.Reps, ", n.Drugs=", n.Drugs,
           "\nThe entire process took ", time[3]/(60*60), " hours",
           sep="" )
-, file="simulation_info.txt"
+, file= paste( name_prefix, "simulation_info.txt", sep="_" )
 )
 
 

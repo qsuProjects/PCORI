@@ -177,35 +177,34 @@ generateSbatch <- function(sbatch_params, runfile_path = NA, run_now = F) {
 
 
 # EDIT THIS LINE EACH TIME
-n.files = 63
+n.files = 500
 
 sbatch_params = data.frame(row)
 sbatch_params[2:n.files,] = row
 
 # EDIT THIS LINE EACH TIME
-path = "/share/PI/manishad/sim_29_sher"
+path = "/share/PI/manishad/genCov"
 
 jobname = paste("job", 1:n.files, sep="_")
 outfile = paste("rm_", 1:n.files, ".out", sep="")
 errorfile = paste("rm_", 1:n.files, ".err", sep="")
 write_path = paste(path, "/sbatch_files/", 1:n.files, ".sbatch", sep="")
-
 runfile_path = paste(path, "/testRunFile.R", sep="")
 
 
 sbatch_params <- data.frame(jobname,
                     outfile,
                     errorfile,
-                    jobtime = "00:48:00",
+                    jobtime = "48:00:00",
                     quality = "normal",
                     node_number = 1,
                     mem_per_node = 32000,
                     mailtype =  "ALL",
                     user_email = "mmathur@stanford.edu",
-                    tasks_per_node = 16,
+                    tasks_per_node = 2,
                     cpus_per_task = 1,
                     path_to_r_script = paste(path, "/simulate.R", sep=""),
-                    args_to_r_script = "16 job_1 2000 200 1 15 /share/PI/manishad/sim_29_sher",
+                    args_to_r_script = paste("16 ", jobname, " 2000 200 1 15", sep=""),
                     write_path,
                     stringsAsFactors = F,
                     server_sbatch_path = NA)
@@ -216,7 +215,7 @@ generateSbatch(sbatch_params, runfile_path)
 
 # run them all
 # works
-setwd(write_path)
+setwd( paste(path, "/sbatch_files", sep="") )
 for (i in 1:n.files) {
   system( paste("sbatch ", i, ".sbatch -p manishad", sep="") )
 }
