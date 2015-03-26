@@ -17,6 +17,8 @@
 #   5.) For both parameter matrices, each variable must have a predictor variable called "intercept".
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+# TEST: 4:10 
+
 
 ########################## READ IN DATA ##########################
 
@@ -26,16 +28,15 @@
 # t0: time at beginning of interval
 # d: whether event occurred at that interval
 
-setwd("~/Dropbox/QSU/Mathur/PCORI/impose_missingness/Data from KK")
+setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/IMPMISS/Data from KK")
 data = read.csv("SURV_2015-02-01_job_10_dataset_1.csv")
 
-setwd("~/Dropbox/QSU/Mathur/PCORI/impose_missingness")
+setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/IMPMISS")
 aux.matrix = read.csv("aux_var_parameters_matrix_v2.csv")
 miss.matrix = read.csv("missing_var_parameters_matrix_v4.csv")
 
 
 ########################## TEST PERFORMANCE ##########################
-
 
 #data=data; outcome.name="d"; start.time.name="t0";
 #stop.time.name="t"; id.var.name="id"; aux.matrix=aux.matrix;
@@ -77,8 +78,18 @@ gets.dropped = c()
 for (i in unique(d.miss$id) ) {
   gets.dropped[i] = all( d.miss$row.has.missing[d.miss$id==i] )
 }
-
 prop.table(table(gets.dropped))
+
+# proportion of subjects who are systematically missing each var
+dt = data.table(d.miss)
+dt[, prop.miss.bmi := mean( is.na(miss.bmi) ), by=id ]
+dt[, prop.miss.ldl := mean( is.na(miss.ldl) ), by=id ]
+dt[, prop.miss.hdl := mean( is.na(miss.hdl) ), by=id ]
+dt[, prop.miss.log_vln := mean( is.na(miss.log_vln) ), by=id ]
+dt[, prop.miss.cd4 := mean( is.na(miss.cd4) ), by=id ]
+
+first.dat = dt[ !duplicated(dt$id), ]
+prop.table( table(first.dat$prop.miss.bmi == 1) )
 
 
 ########################## WRAPPER FUNCTION: IMPOSE MISSINGNESS ##########################
