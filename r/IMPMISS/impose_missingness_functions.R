@@ -136,12 +136,12 @@ impose_missingness = function( data, outcome.name, start.time.name, stop.time.na
   
   ##### Step 2: Create Subject Random Effect Variable #####
   # only do this if an SD that isn't NA is specified
-  if (!is.na(rand.int.SD)) {fake = create_random_effects(data=d2, id.var.name=id.var.name,
+  if (!is.na(rand.int.SD)) {d.rand = create_random_effects(data=d2, id.var.name=id.var.name,
                                                       rand.int.SD=rand.int.SD)}
   
   
   ##### Step 2: Create All Auxiliary Variables ####
-  d3 = make_aux_vars(data=fake, aux.matrix=aux.matrix)
+  d3 = make_aux_vars(data=d.rand, aux.matrix=aux.matrix)
   
   ##### Step 3: Create All Missingness Indicators ####
   d4 = make_missing_indics(data=d3, miss.matrix=miss.matrix)
