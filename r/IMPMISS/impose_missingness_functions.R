@@ -28,12 +28,16 @@
 # t0: time at beginning of interval
 # d: whether event occurred at that interval
 
+
 setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/IMPMISS/Data from KK")
 data = read.csv("SURV_2015-02-01_job_10_dataset_1.csv")
 
 setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/IMPMISS")
-aux.matrix = read.csv("aux_var_parameters_matrix_v2.csv")
-miss.matrix = read.csv("missing_var_parameters_matrix_v4.csv")
+aux.matrix = read.csv("aux_var_parameters_matrix.csv")
+miss.matrix = read.csv("missing_var_parameters_matrix_v3.csv")  # THIS SEEMS TO BE WHAT CAUSES SEGFAULT
+rand.int.SD = as.numeric( read.table("rand_intercepts_sd.txt") )
+
+library(data.table)
 
 
 ########################## TEST PERFORMANCE ##########################
@@ -120,7 +124,8 @@ prop.table( table(first.dat$prop.miss.bmi == 1) )
 
 
 impose_missingness = function( data, outcome.name, start.time.name, stop.time.name, 
-                               id.var.name, aux.matrix, miss.matrix, make.relateds.missing=FALSE ) {
+                               id.var.name, aux.matrix, miss.matrix, make.relateds.missing=FALSE,
+                               rand.int.SD=NA ) {
   
   outcome = data[[outcome.name]]
   start.time = data[[start.time.name]]
@@ -129,6 +134,12 @@ impose_missingness = function( data, outcome.name, start.time.name, stop.time.na
   
   ##### Step 1: Create Time-to-Event Variable #####
   d2 = create_time2event_var(data=data, id=id, outcome=outcome, stop.time=stop.time)
+  
+  ##### Step 2: Create Subject Random Effect Variable #####
+  # only do this if an SD that isn't NA is specified
+  # if (!is.na(rand.int.SD)) {d3 = create_random_effects(data=d2, id.var.name=id.var.name,
+  #                                                    rand.int.SD=rand.int.SD)}
+  #
   
   ##### Step 2: Create All Auxiliary Variables ####
   d3 = make_aux_vars(data=d2, aux.matrix=aux.matrix)
@@ -157,6 +168,27 @@ create_time2event_var = function( data, id, outcome, stop.time ) {
 
 # test - WORKS :)
 #create_time2event_var( data=data, id=data$id, outcome=data$d, stop.time=data$t)
+
+
+
+########################## STEP 2 FUNCTION: CREATE RANDOM INTERCEPT VARIABLE ##########################
+
+#fake = rnorm(mean=0, sd=rand.int.SD, n=length(unique(data[[id]])))
+#length(unique(data[[id]]))
+
+create_random_effects = function( data, id.var.name, rand.int.SD ) {
+  
+  # generate random intercepts ~ N(0, rand.int.SD)
+  rand.intercepts = rnorm(mean=0, sd=rand.int.SD, n=length(unique(data[[id.var.name]])))
+  
+  # number of observations for each subject (vector)
+  obs.per.subj = as.numeric(table(data[[id.var.name]]))
+  
+  # put in data
+  fake = data
+  fake$subj.rand.int = rep(rand.intercepts, obs.per.subj)
+  return(fake)
+}
 
 
 
