@@ -32,7 +32,11 @@ data = read.csv("SURV_2015-02-01_job_10_dataset_1.csv")
 
 setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/IMPMISS")
 aux.matrix = read.csv("aux_var_parameters_matrix.csv")
+<<<<<<< HEAD
 miss.matrix = read.csv("missing_var_parameters_matrix_v4.csv")  # THIS SEEMS TO BE WHAT CAUSES SEGFAULT
+=======
+miss.matrix = read.csv("missing_var_parameters_matrix_v3.csv")  # THIS SEEMS TO BE WHAT CAUSES SEGFAULT
+>>>>>>> 35fed1322be17821b469f03b860e31b2e5731573
 rand.int.SD = as.numeric( read.table("rand_intercepts_sd.txt") )
 
 library(data.table)
@@ -136,9 +140,15 @@ impose_missingness = function( data, outcome.name, start.time.name, stop.time.na
   
   ##### Step 2: Create Subject Random Effect Variable #####
   # only do this if an SD that isn't NA is specified
+<<<<<<< HEAD
   if (!is.na(rand.int.SD)) {d.rand = create_random_effects(data=d2, id.var.name=id.var.name,
                                                       rand.int.SD=rand.int.SD)}
   
+=======
+  # if (!is.na(rand.int.SD)) {d3 = create_random_effects(data=d2, id.var.name=id.var.name,
+  #                                                    rand.int.SD=rand.int.SD)}
+  #
+>>>>>>> 35fed1322be17821b469f03b860e31b2e5731573
   
   ##### Step 2: Create All Auxiliary Variables ####
   d3 = make_aux_vars(data=d.rand, aux.matrix=aux.matrix)
