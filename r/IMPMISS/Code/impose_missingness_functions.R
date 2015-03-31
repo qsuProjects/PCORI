@@ -78,20 +78,6 @@ prop.table( table( is.na(first.dat$ldl) ) )  # at baseline
 
 ##### Did We Hit Global Missingness Targets? #####
 
-# proportion of observations missing at least 1 variable
-# want 84%
-d.miss$row.has.missing = ( is.na(d.miss$bmi) | is.na(d.miss$log_vln) | is.na(d.miss$ldl) | 
-                          is.na(d.miss$hdl) | is.na(d.miss$cd4) )
-prop.table( table(d.miss$row.has.missing) )
-
-# proportion of subjects where each observation is missing at least 1 variable 
-# want 18%
-gets.dropped = c()
-for (i in unique(d.miss$id) ) {
-  gets.dropped[i] = all( d.miss$row.has.missing[d.miss$id==i] )
-}
-prop.table(table(gets.dropped))
-
 # proportion of subjects who are systematically missing each var
 dt = data.table(d.miss)
 dt[, prop.miss.bmi := mean( is.na(miss.bmi) ), by=id ]
@@ -147,7 +133,7 @@ impose_missingness = function( data, outcome.name, start.time.name, stop.time.na
   # only do this if an SD that isn't NA is specified
   if (!is.na(rand.int.SD)) {d.rand = create_random_effects(data=d2, id.var.name=id.var.name,
                                                       rand.int.SD=rand.int.SD)}
-   
+
   ##### Step 2: Create All Auxiliary Variables ####
   d3 = make_aux_vars(data=d.rand, aux.matrix=aux.matrix)
   
@@ -162,16 +148,19 @@ impose_missingness = function( data, outcome.name, start.time.name, stop.time.na
   
   ##### Step 4: Override Observations using Missingness Indicator ####
   d5 = missingify(d4, make.relateds.missing)
-
+  
   ##### Step 5: Print Baseline Proportion Missing for a Few Vars ####
   first.dat = d5[ d5$baseline, ]
   cat("\n")
 
   for (i in c("ldl", "log_vln", "cd4")) {
-    #prop.missing.baseline = as.numeric( prop.table( table( is.na(first.dat[[i]]) ) )[2] )
     prop.missing.baseline = sum( is.na(first.dat[[i]]) ) / length( is.na(first.dat[[i]]) )
     cat( "\nProportion of baseline observations made missing for", i, ":", prop.missing.baseline )
   }
+  
+  ##### Step 5: Print Info on Global Missingness Targets ####
+  proportion_dropped(data=d5, miss.matrix=miss.matrix)
+  prop_subj_dropped(data=d5, id.var.name=id.var.name)
   
   return(d5)
 }
@@ -252,6 +241,8 @@ make_aux_vars = function( data, aux.matrix ) {
 #  and add noise to get vector for the aux variable with length n.obs
 
 make_one_aux_var = function( data, aux.var.name, aux.matrix ) {
+  
+  #if (aux.var.name=="aux.etiol") browser()
   
   n.obs = nrow(data)
   
@@ -413,3 +404,34 @@ missingify = function( data, make.relateds.missing ) {
 
 # test - WORKS :)
 #data = d4
+
+
+########################## STEP ## FUNCTION: COMPUTE PROPORTION OF OBS DROPPED IN CC ANALYSIS ##########################
+
+# want 84%
+proportion_dropped = function(data, miss.matrix) {
+  # vector of variable names
+  vars.of.interest = unique(miss.matrix$parameter)
+  
+  temp = data[ , names(data) %in% vars.of.interest ]  # just keep vars of interest
+
+  # compute proportion dropped in complete-case analysis
+  prop.dropped = sum( complete.cases(temp) ) / length( complete.cases(temp) )
+  cat( "\n\nProportion of all observations dropped in CC analysis:", prop.dropped )
+  return(prop.dropped)
+}
+
+
+########################## STEP ## FUNCTION: COMPUTE PROPORTION OF SUBJECTS DROPPED IN CC ANALYSIS ##########################
+
+# subject gets dropped if they have a missing value somewhere in each row
+prop_subj_dropped = function(data, id.var.name) {
+
+  d.complete = data[complete.cases(data),]  # dataset with only obs without missing values
+  n.kept = length( unique( d.complete[[id.var.name]] ) )
+  prop.dropped = n.kept / length( unique( data[[id.var.name]] ) )
+  
+  cat( "\n\nProportion of all subjects dropped in CC analysis:", prop.dropped )
+  return(prop.dropped)
+}
+
