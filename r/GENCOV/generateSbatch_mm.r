@@ -177,7 +177,7 @@ generateSbatch <- function(sbatch_params, runfile_path = NA, run_now = F) {
 
 
 # EDIT THIS LINE EACH TIME
-n.files = 500
+n.files = 1000
 
 sbatch_params = data.frame(row)
 sbatch_params[2:n.files,] = row
@@ -195,16 +195,16 @@ runfile_path = paste(path, "/testRunFile.R", sep="")
 sbatch_params <- data.frame(jobname,
                     outfile,
                     errorfile,
-                    jobtime = "48:00:00",
+                    jobtime = "5:00:00",
                     quality = "normal",
                     node_number = 1,
-                    mem_per_node = 32000,
+                    mem_per_node = 64000,
                     mailtype =  "ALL",
                     user_email = "mmathur@stanford.edu",
-                    tasks_per_node = 2,
+                    tasks_per_node = 1,
                     cpus_per_task = 1,
                     path_to_r_script = paste(path, "/simulate.R", sep=""),
-                    args_to_r_script = paste("16 ", jobname, " 2000 200 1 15", sep=""),
+                    args_to_r_script = paste("--args 1 ", jobname, " 2000 200 1 15", sep=""),
                     write_path,
                     stringsAsFactors = F,
                     server_sbatch_path = NA)

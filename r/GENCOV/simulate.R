@@ -1,6 +1,6 @@
 
 ######################### RUN IN PARALLEL #########################
-# 10:29
+# 12:08
 
 # load command line arguments
 args = commandArgs(trailingOnly = TRUE)
@@ -83,7 +83,7 @@ l_ply( c( 1:getDoParWorkers() ), .parallel=T, function(.item, .n.Subj, .obs, .n.
                        mean.target=NULL, n.Drugs=.n.Drugs, 
                        pcor=pcor, wcorin=wcorin, n.Reps=.n.Reps,
                        race.names=race.names, write.data=TRUE,
-                       name_prefix= paste( name_prefix, WORKER.ID, sep="_" ) )
+                       name_prefix= paste( .name_prefix, WORKER.ID, sep="_" ) )
 
 }, n.Subj, obs, n.Reps, n.Drugs, name_prefix)
 
