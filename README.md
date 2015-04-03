@@ -39,7 +39,7 @@ Covariate generation scripts are split into four separate code files that need t
 
 The file "corrBound function" defines accessory functions that compute lower and upper bounds on correlations between variables. While these functions are not called internally in the simulation process, they may be a useful pre-processing tool to guide choices of variable parameters.
 
--GENSURV: Code to generate survival times from an extended Cox model
+-*GENSURV*: Code to generate survival times from an extended Cox model
 
 Program "generateByScenario" calls the function mysim which is located on filemysimRangeScenarioSB.R. This file contains all the code necessary to run a simulation where various parameters are tested. This include different assumptions on the covariates used, several censoring methods, among others. Once data is generated, models are fitted and statistics computed using program "fitSurvivalModelsSHER_COM.R".
 
