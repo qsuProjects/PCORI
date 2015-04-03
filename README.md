@@ -41,10 +41,12 @@ The file ```corrBound.R``` defines accessory functions that compute lower and up
 
 The file ```generateSbatch_mm.r``` is for use with a SLURM-based cluster computing system and automatically generates sbatch files to run the simulation code. A few examples are in the directory ```sbatch_files```. File ```push_to_sherlock.R``` is used to push files to the cluster. 
 
--<b>GENSURV</b>: Code to generate survival times from an extended Cox model
 
-Program "generateByScenario" calls the function mysim which is located on filemysimRangeScenarioSB.R. This file contains all the code necessary to run a simulation where various parameters are tested. This include different assumptions on the covariates used, several censoring methods, among others. Once data is generated, models are fitted and statistics computed using program "fitSurvivalModelsSHER_COM.R".
+-<b>STDEPCOV</b>: Code to generate survival times from an extended Cox model
 
-A program that looks at run times depending on the various parameters tested can be found here.
+Program ```generateByScenario``` calls the function ```mysim``` which is located on ```filemysimRangeScenarioSB.R```. This file contains all the code necessary to run a simulation where various parameters are tested. This include different assumptions on the covariates used, several censoring methods, among others. Once data is generated, models are fitted and statistics computed using program ```fitSurvivalModelsSHER_COM.R```.
+
 
 -<b>IMPMISS</b>: Code to generate auxiliary variables and use them to impose missingness. 
+
+File ```impose_missingness_functions.R``` contains functions for 1) generating auxiliary variables as a function of covariates, survival variables, and (optionally) subject random effects, 2) imposing missingness as a function of auxiliary and other variables, and 3) locally testing performance of these algorithms. The user can control simulation parameters by modifying the parameter csv files: ```aux_var_parameters_matrix.csv``` (parameters for auxiliary variable generation), ```missing_var_parameters_matrix.csv``` (parameters for missing indicator generation), and ```rand_intercepts_sd.txt``` (the standard deviation of subject random intercepts, if used). These scripts are not yet parallelized or optimized for cluster use. 
