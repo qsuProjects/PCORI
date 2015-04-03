@@ -26,12 +26,23 @@ To address the implications of methodological choices for handling missing data 
 
 ## About this Code
 
-This code is a work in progress and is provided as-is. More comprehensive documentation should be forthcoming.
+This code is a work in progress and is provided as-is. More comprehensive documentation should be forthcoming. All code is written in R and parallelization files are optimized for used on a SLURM-based cluster computing system.
 
 Questions should be directed to [Kristopher Kapphahn](https://med.stanford.edu/profiles/kristopher-kapphahn).
 
+
 ## About the Subfolders
 
--GENCOV: Code to generate correlated covariates (binary drug indicators, continuous proportion of time on drug variables, normal variables, and categorical variables), with or without time effects within subjects
+-GENCOV: R Code to generate correlated covariates (binary drug indicators, continuous proportion of time on drug variables, normal variables, and categorical variables), with or without time effects within subjects
+
+Covariate generation scripts are split into four separate code files that need to be run in sequence. The first, "Initialize Variables", assigns global variables that control simulation parameters such as covariate means, covariate standard deviations, and correlation structures. Files "Load Functions" and "jointly_generate_binary_normal_modified" define necessary functions, including a modified version of a function in package BinNor. Finally, "Simulate" allows user-inputted arguments (representing the sample size, number of observations per subject, and number of simulations), computes statistical performance measures over multiple simulations, and creates performance plots.
+
+The file "corrBound function" defines accessory functions that compute lower and upper bounds on correlations between variables. While these functions are not called internally in the simulation process, they may be a useful pre-processing tool to guide choices of variable parameters.
+
+-GENSURV: Code to generate survival times from an extended Cox model
+
+Program "generateByScenario" calls the function mysim which is located on filemysimRangeScenarioSB.R. This file contains all the code necessary to run a simulation where various parameters are tested. This include different assumptions on the covariates used, several censoring methods, among others. Once data is generated, models are fitted and statistics computed using program "fitSurvivalModelsSHER_COM.R".
+
+A program that looks at run times depending on the various parameters tested can be found here.
 
 -IMPMISS: Code to generate auxiliary variables and use them to impose missingness. 
