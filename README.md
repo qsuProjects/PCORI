@@ -44,12 +44,12 @@ The file ```generateSbatch_mm.r``` is for use with a SLURM-based cluster computi
 
 
 -<b>STDEPCOV</b>: Code to generate survival times from an extended Cox model
-*Author: Kristopher Kapphahn*
+<p>*Author: Kristopher Kapphahn*
 
 Program ```generateByScenario``` calls the function ```mysim``` which is located on ```filemysimRangeScenarioSB.R```. This file contains all the code necessary to run a simulation where various parameters are tested. This include different assumptions on the covariates used, several censoring methods, among others. Once data is generated, models are fitted and statistics computed using program ```fitSurvivalModelsSHER_COM.R```.
 
-
+<p><p>
 -<b>IMPMISS</b>: Code to generate auxiliary variables and use them to impose missingness. 
-*Author: Maya Mathur*
+<p>*Author: Maya Mathur*
 
 File ```impose_missingness_functions.R``` contains functions for 1) generating auxiliary variables as a function of covariates, survival variables, and (optionally) subject random effects, 2) imposing missingness as a function of auxiliary and other variables, and 3) locally testing performance of these algorithms. The user can control simulation parameters by modifying the parameter csv files: ```aux_var_parameters_matrix.csv``` (parameters for auxiliary variable generation), ```missing_var_parameters_matrix.csv``` (parameters for missing indicator generation), and ```rand_intercepts_sd.txt``` (the standard deviation of subject random intercepts, if used). These scripts are not yet parallelized or optimized for cluster use. 
