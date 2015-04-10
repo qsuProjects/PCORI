@@ -20,6 +20,7 @@
 # INCREASING THE BETA FOR SUBJ.RAND.INTERCEPT IN MISSINGNESS MATRIX SHOULD CAUSE MORE W/IN-S CLUSTERING WITHOUT CHANGING OVERALL AMOUNT OF MISSINGNESS.
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
 ########################## READ IN DATA ##########################
 
 # TEMPORARY - EVENTUALLY MOVE TO RUN FILE
@@ -34,7 +35,13 @@ data = read.csv("SURV_2015-02-01_job_10_dataset_1.csv")
 
 setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/IMPMISS")
 aux.matrix = read.csv("aux_var_parameters_matrix.csv")
-miss.matrix = read.csv("missing_var_parameters_matrix.csv")
+#miss.matrix = read.csv("missing_var_parameters_matrix.csv")
+
+#### TEST ONLY!!
+miss.matrix = read.csv("missing_var_parameters_matrix_test.csv")
+miss.matrix$beta[miss.matrix$parameter=="subj.rand.int"] = 5  # TEST ONLY!
+
+
 rand.int.SD = as.numeric( read.table("rand_intercepts_sd.txt") )
 
 # load required libraries
@@ -62,6 +69,8 @@ summary( glm( is.na(ldl) ~ t0 + aux.etiol + subj.rand.int,
 
 summary( glm( is.na(log_vln) ~ t0 + aux.etiol,
               data=d.miss, family=binomial(link="logit") ) ) 
+
+
 
 ##### Did We Hit Individual Variable Missingness Targets? #####
 
@@ -125,7 +134,7 @@ impose_missingness = function( data, outcome.name, start.time.name, stop.time.na
   start.time = data[[start.time.name]]
   stop.time = data[[stop.time.name]]
   id = data[[id.var.name]]
-  
+ 
   ##### Step 1: Create Time-to-Event Variable #####
   d2 = create_time_vars(data=data, id=id, outcome=outcome, start.time=start.time, stop.time=stop.time)
   
@@ -139,12 +148,6 @@ impose_missingness = function( data, outcome.name, start.time.name, stop.time.na
   
   ##### Step 3: Create All Missingness Indicators ####
   d4 = make_missing_indics(data=d3, miss.matrix=miss.matrix)
-  
-  # AT THIS POINT, THE MISS INDICS ALREADY THEMSELVES HAVE MISSINGNESS - BAD
-  #browser()
-  #print( paste("BMI indic has missings: ", any(is.na(d4$miss.bmi)) ) )
-  #print( paste("LDL indic has missings: ", any(is.na(d4$miss.ldl)) ) )
-  #print( paste("HDL indic has missings: ", any(is.na(d4$miss.hdl)) ) )
   
   ##### Step 4: Override Observations using Missingness Indicator ####
   d5 = missingify(d4, make.relateds.missing)
@@ -160,7 +163,7 @@ impose_missingness = function( data, outcome.name, start.time.name, stop.time.na
   
   ##### Step 5: Print Info on Global Missingness Targets ####
   proportion_dropped(data=d5, miss.matrix=miss.matrix)
-  prop_subj_dropped(data=d5, id.var.name=id.var.name)
+  prop_subj_dropped(data=d5, id.var.name=id.var.name, miss.matrix=miss.matrix)
   
   return(d5)
 }
@@ -242,11 +245,10 @@ make_aux_vars = function( data, aux.matrix ) {
 
 make_one_aux_var = function( data, aux.var.name, aux.matrix ) {
   
-  #if (aux.var.name=="aux.etiol") browser()
-  
   n.obs = nrow(data)
   
   # pull out relevant parameters except intercept
+  if ( !any(miss.matrix$parameter == "intercept") ) stop("Intercept is missing in missing variable matrix")
   matrix2 = aux.matrix[ aux.matrix$aux.var==aux.var.name & aux.matrix$parameter!="intercept", ]
   
   # pull out intercept
@@ -302,11 +304,11 @@ make_one_aux_var = function( data, aux.var.name, aux.matrix ) {
 ########################## STEP 3 FUNCTION: CREATE A SINGLE MISSINGNESS INDICATOR ##########################
 
 make_one_missing_indic = function( data, miss.var.name, miss.matrix ) {
+  
   n.obs = nrow(data)
   
-  #if (miss.var.name=="miss.ldl") browser()
-  
   # pull out relevant parameters except intercept
+  if ( !any(miss.matrix$parameter == "intercept") ) stop("Intercept is missing in missing variable matrix")
   matrix2 = miss.matrix[ miss.matrix$miss.var==miss.var.name &
                            miss.matrix$parameter!="intercept", ]
   
@@ -354,6 +356,7 @@ make_one_missing_indic = function( data, miss.var.name, miss.matrix ) {
 
 make_missing_indics = function( data, miss.matrix ) {
   # extract names of auxiliary variables from matrix
+  
   miss.names = unique( miss.matrix$miss.var )
   
   # start with passed dataset
@@ -410,10 +413,10 @@ missingify = function( data, make.relateds.missing ) {
 
 # want 84%
 proportion_dropped = function(data, miss.matrix) {
-  # vector of variable names
-  vars.of.interest = unique(miss.matrix$parameter)
-  
-  temp = data[ , names(data) %in% vars.of.interest ]  # just keep vars of interest
+
+  # keep only vars of interest
+  vars.of.interest = unique(miss.matrix$miss.var)
+  temp = data[ , names(data) %in% vars.of.interest ]
 
   # compute proportion dropped in complete-case analysis
   prop.dropped = sum( complete.cases(temp) ) / length( complete.cases(temp) )
@@ -425,9 +428,18 @@ proportion_dropped = function(data, miss.matrix) {
 ########################## STEP ## FUNCTION: COMPUTE PROPORTION OF SUBJECTS DROPPED IN CC ANALYSIS ##########################
 
 # subject gets dropped if they have a missing value somewhere in each row
-prop_subj_dropped = function(data, id.var.name) {
+# or: subject is kept if they have at least one row that's 100% complete
 
-  d.complete = data[complete.cases(data),]  # dataset with only obs without missing values
+prop_subj_dropped = function(data, id.var.name, miss.matrix) {
+
+  # keep only vars of interest
+  vars.of.interest = unique(miss.matrix$miss.var)
+  temp = data[ , names(data) %in% vars.of.interest ]
+  
+  # dataset of only complete rows
+  d.complete = data[complete.cases(temp),]  
+  
+  # keep only S who are represented in this complete dataset
   n.kept = length( unique( d.complete[[id.var.name]] ) )
   prop.dropped = n.kept / length( unique( data[[id.var.name]] ) )
   
