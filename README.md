@@ -26,12 +26,30 @@ To address the implications of methodological choices for handling missing data 
 
 ## About this Code
 
-This code is a work in progress and is provided as-is. More comprehensive documentation should be forthcoming.
+This code is a work in progress and is provided as-is. More comprehensive documentation should be forthcoming. All code is written in R and parallelization files are optimized for used on a SLURM-based cluster computing system.
 
 Questions should be directed to [Kristopher Kapphahn](https://med.stanford.edu/profiles/kristopher-kapphahn).
 
+
 ## About the Subfolders
 
--GENCOV: Code to generate correlated covariates (binary drug indicators, continuous proportion of time on drug variables, normal variables, and categorical variables), with or without time effects within subjects
+-<b>GENCOV</b>: R Code to generate correlated covariates (binary drug indicators, continuous proportion of time on drug variables, normal variables, and categorical variables), with or without time effects within subjects.
+<p>*Author: Maya Mathur*
 
--IMPMISS: Code to generate auxiliary variables and use them to impose missingness. 
+Covariate generation scripts are split into several separate code files that need to be run in sequence (see ```simulate.R``` for the workflow). The first, ```init_variables.R```, assigns global variables that control simulation parameters such as covariate means, covariate standard deviations, and correlation structures. It loads several matrices of parameters that can be manually edited as csv files by the user: ```parameters_time_vary.csv``` and ```pcor_time_vary.csv``` (a population correlation matrix). Files ```load_functions.R``` and ```jointly_generate_binary_normal_modified_v2.R``` define necessary functions, including a modified version of a function in package ```BinNor```. Finally, ```simulate.R``` is a parallelized wrapper script (requiring modification for non-SLURM cluster computing systems) allowing user-inputted arguments (representing the sample size, number of observations per subject, and number of simulations), computes statistical performance measures over multiple simulations, and creates performance plots.
+
+The file ```corrBound.R``` defines accessory functions that compute lower and upper bounds on correlations between variables. While these functions are not called internally in the simulation process, they may be a useful pre-processing tool to guide choices of variable parameters.
+
+The file ```generateSbatch_mm.r``` is for use with a SLURM-based cluster computing system and automatically generates sbatch files to run the simulation code. A few examples are in the directory ```sbatch_files```. File ```push_to_sherlock.R``` is used to push files to the cluster. 
+
+
+-<b>STDEPCOV</b>: Code to generate survival times from an extended Cox model
+<p>*Author: Kristopher Kapphahn*
+
+Program ```generateByScenario``` calls the function ```mysim``` which is located on ```filemysimRangeScenarioSB.R```. This file contains all the code necessary to run a simulation where various parameters are tested. This include different assumptions on the covariates used, several censoring methods, among others. Once data is generated, models are fitted and statistics computed using program ```fitSurvivalModelsSHER_COM.R```.
+
+
+-<b>IMPMISS</b>: Code to generate auxiliary variables and use them to impose missingness. 
+<p>*Author: Maya Mathur*
+
+File ```impose_missingness_functions.R``` contains functions for 1) generating auxiliary variables as a function of covariates, survival variables, and (optionally) subject random effects, 2) imposing missingness as a function of auxiliary and other variables, and 3) locally testing performance of these algorithms. The user can control simulation parameters by modifying the parameter csv files: ```aux_var_parameters_matrix.csv``` (parameters for auxiliary variable generation), ```missing_var_parameters_matrix.csv``` (parameters for missing indicator generation), and ```rand_intercepts_sd.txt``` (the standard deviation of subject random intercepts, if used). These scripts are not yet parallelized or optimized for cluster use. 
