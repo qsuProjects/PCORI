@@ -164,7 +164,7 @@ make_aux_vars = function( data, aux.matrix ) {
 #  and add noise to get vector for the aux variable with length n.obs
 
 make_one_aux_var = function( data, aux.var.name, aux.matrix ) {
-  
+
   n.obs = nrow(data)
   
   # pull out relevant parameters except intercept
@@ -187,7 +187,8 @@ make_one_aux_var = function( data, aux.var.name, aux.matrix ) {
   # if auxiliary variable is built according to a linear model
   if (model == "linear") {
     # random error vector
-    error.SD = matrix2$error.SD[1]  # use just first entry since constant within an aux variable
+    error.SD = aux.matrix$error.SD[aux.matrix$aux.var==aux.var.name][1]  # use just first entry since constant within an aux variable
+    #error.SD = matrix2$error.SD[1]  # use just first entry since constant within an aux variable
     errors = rnorm(n=n.obs, mean=0, sd=error.SD )
     
     # observed values
