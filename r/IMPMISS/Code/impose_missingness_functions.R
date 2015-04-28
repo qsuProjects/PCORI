@@ -21,7 +21,7 @@
 
 ########################## WRAPPER FUNCTION: IMPOSE MISSINGNESS ##########################
 
-##### Arguments #####
+##### Arguments #####ma
 
 # data: original dataset
 # outcome.name: quoted name of the binary outcome variable
@@ -164,11 +164,10 @@ make_aux_vars = function( data, aux.matrix ) {
 #  and add noise to get vector for the aux variable with length n.obs
 
 make_one_aux_var = function( data, aux.var.name, aux.matrix ) {
-
   n.obs = nrow(data)
   
   # pull out relevant parameters except intercept
-  if ( !any(miss.matrix$parameter == "intercept") ) stop("Intercept is missing in missing variable matrix")
+  if ( !any(aux.matrix$parameter == "intercept") ) stop("Intercept is missing in aux variable matrix")
   matrix2 = aux.matrix[ aux.matrix$aux.var==aux.var.name & aux.matrix$parameter!="intercept", ]
   
   # pull out intercept
@@ -181,6 +180,7 @@ make_one_aux_var = function( data, aux.var.name, aux.matrix ) {
   linear.pred = intercept
   for (p in matrix2$parameter) {
     beta = matrix2$beta[ matrix2$parameter==p ]  # beta is length 1; recycled
+    if ( is.null(data[[p]]) ) stop( paste("Parameter ", p, " does not appear in the dataset", sep=""))
     linear.pred = linear.pred + ( data[[p]] * beta )  # linear predictor (no error term yet)
   }
   
