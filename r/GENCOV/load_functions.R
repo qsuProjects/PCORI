@@ -178,6 +178,7 @@ expand_subjects = function(mus3, n.OtherNorms, n.OtherBins, n.Drugs, wcorin, obs
     wcorin2 = as.matrix(wcorin)
     
     # change the correlations to 0s where pdrugs = zero
+    # SHOULD WE ALSO DO THIS WHEN PDRUGS = 1? DOES THIS EVEN HAPPEN?
     for (r in zerodrugs){ 
       wcorin2[,r] = 0
       wcorin2[r,] = 0
@@ -497,7 +498,7 @@ dataset_performance = function(sim, n, obs, n.Drugs, n.OtherBins, n.OtherNorms,
 
 
 
-######################### FUNCTION: RUN SEVERAL SIMULATIONS AND RETURN RESULTS LIST ######################### 
+######################### WRAPPER FUNCTION: RUN SEVERAL SIMULATIONS AND RETURN RESULTS LIST ######################### 
 
 ###### This is the function that the user would call. ######
 

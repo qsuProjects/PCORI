@@ -1,0 +1,158 @@
+exit
+quit
+2+2
+horses = c("Zero Gravity", "Misha", "Eli")
+horses
+horses[2]
+conf.obs = c(12, 1, 3, 6, 8)
+subj.obs = c(9)
+leaderboard = function(conf.obs, subj.obs) {#
+	 print( sort( c(conf.obs, subj.obs) ) )#
+}
+leaderboard(conf.obs, subj.obs)
+leaderboard = function(conf.obs, subj.obs) {#
+	print("The ranked points are:")#
+	 print( sort( c(conf.obs, subj.obs) ) )#
+}#
+#
+leaderboard(conf.obs, subj.obs)
+f = function(start.mean, time, prop.incr) {#
+	grand.mean = start.mean + time*prop.incr#
+	print(grand.mean)#
+}
+f(10, 1, .1)
+f(10, 10, .1)
+f(10, 2, .1)
+f = function(start.mean, time, prop.incr) {#
+	grand.mean = start.mean + (time^2)*prop.incr#
+	print(grand.mean)#
+}
+f(10, 2, .1)
+f(10, 1, .1)
+f(10, 3, .1)
+f(10, 5, .1)
+times = seq(1:10)
+times
+?apply
+means = apply( X=times, FUN= function(x) f(10, x, .1) )
+f(10, times, .1)
+means = f(10, times, .1)
+plot(times, means)
+f = function(start.mean, time, prop.incr) {#
+	grand.mean = start.mean + sqrt(time)*prop.incr#
+	print(grand.mean)#
+}
+# try it out#
+times = seq(1:10)#
+means = f(10, times, .1)#
+plot(times, means)
+f = function(start.mean, time, incr.coef) {#
+	grand.mean = start.mean + log(time)*prop.incr#
+	print(grand.mean)#
+}
+# try it out#
+times = seq(1:10)#
+means = f(10, times, .1)#
+plot(times, means)
+times = seq(1:100)
+# try it out#
+times = seq(1:100)#
+means = f(10, times, .1)#
+plot(times, means)
+times = seq(1:100)#
+means = f(10, times, .1)#
+plot(times, means)
+f = function(start.mean, time, incr.coef) {#
+	grand.mean = start.mean + log(time)*incr.coef#
+	print(grand.mean)#
+}
+# try it out#
+times = seq(1:100)#
+means = f(10, times, .1)#
+plot(times, means)
+# try it out#
+times = seq(1:100)#
+means = f(10, times, .5)#
+plot(times, means)
+# try it out#
+times = seq(1:100)#
+means = f(10, times,3)#
+plot(times, means)
+# try it out#
+times = seq(1:100)#
+means = f(8, times,2)#
+plot(times, means)
+# try it out#
+times = seq(1:100)#
+means = f(8, times,1)#
+plot(times, means)
+# try it out#
+times = seq(1:100)#
+means = f(8, times,.8)#
+plot(times, means)
+sample(seq(1:10000))[1]
+while (x != 47) {#
+	x = sample(seq(1:10000))[1]#
+}
+x=0#
+while (x != 47) {#
+	x = sample(seq(1:10000))[1]#
+}
+x
+install.packages("penalized")
+library(penalized)
+?vignette
+vignette("penalized")
+vignette("coxph")
+vignette("survival")
+vignette("car")
+vignette("Hmisc")
+data(nki70)
+head(nki70)
+fit <- penalized(Surv(time,event)~DIAPH3+NUSAP1, data=nki70, lambda2=1)
+summary(fit)
+fit
+plot(fit)
+fit <- penalized(Surv(time,event)~DIAPH3+NUSAP1 + cluster(grade), data=nki70, lambda2=1)
+fit <- penalized(Surv(time,event)~DIAPH3+NUSAP1 + cluster(Grade), data=nki70, lambda2=1)
+fit
+library(penalized)
+penalized(5)
+?penalized
+waterfall <- function(balance){#
+balance$desc <- factor(balance$desc, levels = balance$desc)#
+balance$id <- seq_along(balance$amount)#
+balance$type <- ifelse(balance$amount > 0, "increase","decrease")#
+balance[balance$id %in% c(1,dim(balance)[1]),"type"] <- "net"#
+balance$end <- cumsum(balance$amount)#
+balance$end <- c(head(balance$end, -1), 0)#
+balance$start <- c(0, head(balance$end, -1))#
+balance <- balance[, c(3, 1, 4, 6, 5, 2)]#
+balance#
+balance$type <- factor(balance$type, levels = c("decrease","increase", "net"))#
+p1 <- ggplot(balance, aes(desc, fill = type)) + #
+geom_rect(aes(x = desc,xmin = id - 0.45, xmax = id + 0.45, ymin = end,ymax = start))+#
+xlab("") + #
+ylab("") + #
+geom_text(subset = .(type == "increase"), aes(id,end, label = comma(amount)), vjust = 1, size = 4,fontface="bold") +#
+geom_text(subset = .(type == "decrease"), aes(id,end, label = comma(amount)), vjust = -0.3,size = 4,fontface="bold")+#
+geom_text(data = subset(balance,type == "net" & id == min(id)), aes(id, end, label = comma(end), vjust = ifelse(end <start, 1, -0.3)), size = 4,fontface="bold") + #
+geom_text(data = subset(balance,type == "net" & id == max(id)), aes(id, start, label = comma(start), vjust = ifelse(end < start, -0.3, 1)), size = 4,fontface="bold")+#
+theme_bw()+#
+theme(legend.position = "none")#
+return(p1)#
+}
+library(ggplot2)
+balance <- data.frame(desc = c("Starting Cash","Sales", "Refunds", "Payouts", "Court Losses","Court Wins", "Contracts", "End Cash"), #
+                  amount = c(2000, 3400, -1100, -100, -6600, 3800, 1400, 2800))
+waterfall(balance)
+balance
+setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/IMPMISS/Data from KK")#
+data = read.csv("SURV_2015-02-01_job_10_dataset_1.csv")#
+#
+setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/IMPMISS")#
+aux.matrix = read.csv("aux_var_parameters_matrix.csv")#
+miss.matrix = read.csv("missing_var_parameters_matrix.csv")#
+rand.int.SD = as.numeric( read.table("rand_intercepts_sd.txt") )#
+#
+library(data.table)
