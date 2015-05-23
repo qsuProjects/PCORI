@@ -74,18 +74,21 @@ one = 0.99
 
 ######################### LOAD MATRICES AND PARAMETER DATAFRAME #########################
 
-#setwd("/share/PI/manishad/for_kk/sim_16_code")
+setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/GENCOV/vignettes")
 
 # within-subject correlation matrix
-wcorin = read.csv("wcor_maya_time_vary.csv", header=FALSE)[-1,-1]
+wcorin = read.csv("ex1_wcor.csv", header=FALSE)[-1,-1]
 wcor = as.numeric(t(wcorin)[lower.tri(wcorin)]) #it gets read in by rows
 
 # population correlation matrix
-pcorin = read.csv("pcor_time_vary.csv", header=FALSE)[-1,-1]
+pcorin = read.csv("ex1_pcor.csv", header=FALSE)[-1,-1]
 pcor = as.numeric(t(pcorin)[lower.tri(pcorin, diag=F)]) # need to transpose and read in the lower half to convert the a matrix into vector by row
 
 # read in and complete parameters dataframe
-parameters = complete_parameters( read.csv("parameters_time_vary.csv"), n )
+parameters = complete_parameters( read.csv("ex1_parameters.csv"), .n.Subj )
+
+# parameters for categorical variable
+cat.parameters = read.csv("ex1_categorical_parameters.csv")
 
 
 ######################### RACE MODEL COEFFICIENTS #########################

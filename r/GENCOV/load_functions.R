@@ -18,6 +18,7 @@ library(mvtnorm)
 library(ICC)
 library(miscTools)
 library(car)
+library(plyr)
 
 # load jointly generate function
 # source("jointly_generate_binary_normal_modified_v2.R")
@@ -76,69 +77,95 @@ proportionize = function(x, zero, one) {
 }
 
 
-############################## FUNCTION: GENERATE RACE ##############################
 
-#datc: the dataset without race
-add_race = function(d3, n, obs) {
+
+############################## FUNCTION: GENERATE VALUES OF ONE VARIABLE USING LOGISTIC MODEL ##############################
+
+# Given a matrix of generation parameters and a dataset, returns the linear predictor for one logistic variable.
+
+# m: parameter matrix
+# data: dataframe from which to generate
+
+make_one_linear_pred = function(m, data) {
+  # pull out relevant parameters except intercept
+  if ( !any(m$parameter == "intercept") ) stop("Intercept is missing in categorical variable parameter matrix")
+  m2 = m[ m$parameter!="intercept", ]  # matrix without intercept
   
-  # create dataframe with just the first observation from each patient
-  first.dat = d3[!duplicated(d3$id),]
-      
-  # estimate logits for black and other-race
-  logit.race.b = bb0 + bb1*first.dat$ever_abac + bb2*first.dat$ever_ataz + bb3*first.dat$ever_dida + bb4*first.dat$ever_efav + bb5*first.dat$ever_emtr +
-    bb6*first.dat$ever_indi + bb7*first.dat$ever_lami + bb8*first.dat$ever_lopi + bb9*first.dat$ever_nelf + bb10*first.dat$ever_nevi +
-    bb11*first.dat$ever_rito + bb12*first.dat$ever_saqu + bb13*first.dat$ever_stav + bb14*first.dat$ever_teno + bb15*first.dat$ever_zido +
-    bb16*first.dat$male + 
-    bb17*(first.dat$age_cat=="b.35to45") + bb18*(first.dat$age_cat=="c.45to55") + bb19*(first.dat$age_cat=="d.55to65") + bb20*(first.dat$age_cat=="e.Over65") +  
-    bb21*(first.dat$bmi_cat=="b.Under20") + bb22*(first.dat$bmi_cat=="c.25to35") + bb23*(first.dat$bmi_cat=="d.Over30") + 
-    bb33*first.dat$bpd + bb34*first.dat$bps + bb35*first.dat$hdl + bb36*first.dat$ldl + bb37*first.dat$trig
+  # pull out intercept
+  intercept = as.numeric(as.character( m$beta[ m$parameter=="intercept" ] ) )
   
-  logit.race.o = bo0 + bo1*first.dat$ever_abac + bo2*first.dat$ever_ataz + bo3*first.dat$ever_dida + bo4*first.dat$ever_efav + bo5*first.dat$ever_emtr +
-    bo6*first.dat$ever_indi + bo7*first.dat$ever_lami + bo8*first.dat$ever_lopi + bo9*first.dat$ever_nelf + bo10*first.dat$ever_nevi +
-    bo11*first.dat$ever_rito + bo12*first.dat$ever_saqu + bo13*first.dat$ever_stav + bo14*first.dat$ever_teno + bo15*first.dat$ever_zido +
-    bo16*first.dat$male + 
-    bo17*(first.dat$age_cat=="b.35to45") + bo18*(first.dat$age_cat=="c.45to55") + bo19*(first.dat$age_cat=="d.55to65") + bo20*(first.dat$age_cat=="e.Over65") +  
-    bo21*(first.dat$bmi_cat=="b.Under20") + bo22*(first.dat$bmi_cat=="c.25to35") + bo23*(first.dat$bmi_cat=="d.Over30") + 
-    bo33*first.dat$bpd + bo34*first.dat$bps + bo35*first.dat$hdl + bo36*first.dat$ldl + bo37*first.dat$trig
-  
-  # probability of being each race
-  # each is a vector where the jth entry is the probability for the jth person
-  p.race1 = exp(logit.race.b)/(1+exp(logit.race.b)+exp(logit.race.o))
-  p.race2 = exp(logit.race.o)/(1+exp(logit.race.b)+exp(logit.race.o))
-  p.race0 = 1/(1+exp(logit.race.b)+exp(logit.race.o))
-  #p.race0 = ifelse(p.race0 < 0 ,0, p.race0)
-  
-  # create vector of lists for each person's race
-  race = vector("list", n)
-  
-  # generate each person's race multinomially
-  for (j in 1:n)  race[[j]] = rmultinom(1, 1, c(p.race0[j], p.race1[j], p.race2[j]))
-  
-  race = t(do.call("cbind", race))
-  
-  # recode race
-  # if the third col is 1, race=2
-  # if the second col is 1, race=1
-  # if the first col is 1, race=0
-  # the i,jth entry of race now corresponds to whether person i was of race j
-  racecat = ifelse(race[,3] == 1, 2, ifelse(race[,2] == 1, 1, 0))
-  
-  ### expand race
-  racecatexp = rep(NA, n*obs)
-  # for each subject, fill in the relevant race entries of the vector, repeating for all the observations
-  for (i in 1:n ) {
-    # number of entries already used: number of previous subjects * obs per subject
-    entriesUsed = (i-1)*obs 
-    racecatexp[ (entriesUsed + 1) : (entriesUsed + obs)] = racecat[i]
+  # calculate linear predictor, not including any error term
+  linear.pred = intercept
+  for (p in m2$parameter) {
+    beta = as.numeric( as.character( m2$beta[ m2$parameter==p ] ) ) # beta is length 1; recycled
+    if ( is.null(data[[p]]) ) stop( paste("Parameter ", p, " does not appear in the dataset", sep=""))
+    linear.pred = linear.pred + ( data[[p]] * beta )  # linear predictor
   }
   
+  # calculate probability of missingness, pi
+  pi = exp(linear.pred) / (1 + exp(linear.pred))
   
-  ### step 3.5 - combine race
-  d4 = cbind(d3, racecatexp)
+  if ( any(is.na(linear.pred)) ) warning( cat("\n\nLinear predictor to construct categorical variable
+                                                  has missing values.\nLinear predictor may have been too large,
+                                                leading to Inf values when calculating predicted probability.\n") )
   
-  return(d4)
+  return(linear.pred)
 }
 
+
+
+############################## FUNCTION: GENERATE ONE CATEGORICAL VARIABLE ##############################
+
+# ADD TO DOC: MUST PUT "REF" IN AS BETA FOR THE REFERENCE LEVEL IN CAT PARAMS MATRIX
+
+# d: the dataset without the categorical variable
+
+add_one_categorical = function(d, n, obs, cat.parameters) {
+
+  # extract number of levels and names of levels
+  n.levels = length( unique( cat.parameters$level ) )
+  levels.to.model = as.character( unique( cat.parameters$level[cat.parameters$beta != "ref"] ) )
+  ref.level = as.character( unique( cat.parameters$level[cat.parameters$beta == "ref"] ) )
+  
+  # split the parameters matrix into separate dataframes for each level to model
+  # omit the reference level since it's not being modeled
+  split = dlply( cat.parameters[ cat.parameters$beta != "ref", ], .(level) )
+  
+  # calculate exponentiated linear predictor for each race and put in dataframe
+  exp.lin.preds = as.data.frame( lapply( split, function(x) exp( make_one_linear_pred(x, d) ) ) )
+  
+  # make dataframe that will hold probabilities of being each level
+  probs = as.data.frame( matrix( nrow=nrow(exp.lin.preds), ncol=n.levels ) )
+  names(probs) = c(levels.to.model, ref.level)
+  
+  # make vector of denominators for each subject's race probabilities
+  # 1 + sum of exponentiated linear predictors for all levels
+  denoms = 1 + apply(exp.lin.preds, MARGIN=1, FUN=sum)
+  
+  # for each level EXCEPT the reference, fill in subject's probability 
+  # note that these will NOT necessarily be sum to 1 because rmultinom internally does that
+  for (i in 1:(n.levels-1) ) {
+    probs[,i] = exp.lin.preds[,i] / denoms
+  }
+  
+  # for reference level (last column)
+  probs[,n.levels] = 1 / denoms
+
+  # generate the categorical variable
+  obs = nrow(probs)
+  cat.var = vector("list", obs)   # create vector of lists for each observation's indicators
+  for (j in 1:obs)  cat.var[[j]] = rmultinom(1, 1, probs[j,])
+  cat.var = t(do.call("cbind", cat.var))
+  
+  # put new variables in dataframe
+  return( merge(d, cat.var) )
+}
+
+#test - works :)
+#setwd("/Users/mmathur/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/GENCOV/vignettes")
+#d = read.csv("test_d2.csv")  # this was exported from make_one_dataset right before entering this function
+#n=50
+#obs=4
 
 
 ############################## FUNCTION: EXPAND SUBJECTS ##############################
@@ -161,15 +188,6 @@ expand_subjects = function(mus3, n.OtherNorms, n.OtherBins, n.Drugs, wcorin, obs
   for (s in 1:n) {
     staticBins = mus3[ s, 1:n.OtherBins ] #subset the matrix to get static (non-time-varying) binaries for subject s
     drugProbs = mus3[ s, (n.OtherBins + 1):(n.OtherBins + n.Drugs) ] # subset the matrix to get binaries for subject s
-    
-    ### FOR DEBUGGING ONLY ###
-    if ( ( min(drugProbs)<=0 ) | ( max(drugProbs)>=1 ) ) {
-      string = paste("SUBJECT", s, "HAD ILLEGAL DRUG PROBS:")
-       print(string)
-      print(drugProbs)
-    }
-    
-    
     normMeans = mus3[ s, (n.OtherBins + n.Drugs + 1) : ncol(mus3) ] # subset the matrix to get the non-drug normals for subject s
     
     zerodrugs = which(drugProbs==zero) # which drugs have p = 0?
@@ -186,7 +204,7 @@ expand_subjects = function(mus3, n.OtherNorms, n.OtherBins, n.Drugs, wcorin, obs
     
     # convert correlation matrix to vector of just upper-tri elements
     newwcorvec = upper_tri_vec(wcorin2) 
-    
+
     # create a list with a dataset (of length obs) for each subject
     dat[[s]] = mod.jointly.generate.binary.normal(no.rows=obs, no.bin=length(drugProbs), no.nor=length(normMeans),
                                                    prop.vec.bin=drugProbs, mean.vec.nor=normMeans,
@@ -253,7 +271,7 @@ make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcorin) {
   
   ### step 2 - generate time-varying data for each person
   d1 = expand_subjects(mus3, n.OtherNorms, n.OtherBins, n.Drugs, wcorin, obs)
- 
+
   ### step 3 - add patient id, ever-use indicators, and variable names
   id = rep(1:n, each=obs)
   d2 = as.data.frame( cbind(id, d1, everUserExp) ) 
@@ -264,11 +282,13 @@ make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcorin) {
             as.character(parameters$name[parameters$type=="bin.drug"]))
   names(d2) = names
   
+  browser()
+  
   ### step 3.1 - dummy-code variables for race model
   d3 = add_dummy_vars(d2)
 
   ### step 3.2 - add race ###
-  d4 = add_race(d3, n, obs)
+ # d4 = add_race(d3, n, obs)
   
   ### step 3.3 - add time-function variables ###
   d5 = add_time_function_vars(d4, obs, parameters)
@@ -523,7 +543,7 @@ dataset_performance = function(sim, n, obs, n.Drugs, n.OtherBins, n.OtherNorms,
 
 repeat_sim = function(n, obs, parameters, prop.target = NULL, mean.target = NULL, n.Drugs, 
                        pcor, wcorin, n.Reps, race.names, write.data=FALSE, name_prefix) {
-  
+
   ##### extract parameters from parameter matrix #####
   bin.props = parameters$prop[parameters$type == "bin.other" | parameters$type == "bin.drug"]  # = bin.props
   nor.means = parameters$across.mean[ parameters$type %in% c("normal.drug", "normal.other", "time.function") ]  # = nor.means
@@ -551,7 +571,7 @@ repeat_sim = function(n, obs, parameters, prop.target = NULL, mean.target = NULL
   ##### simulate data n.Reps times, adding each entry to results list #####
   for (i in 1:n.Reps) {
     sim = make_one_dataset(n, obs, parameters, n.Drugs, pcor, wcorin)
-
+    
     newEntry = dataset_performance(sim, n, obs, n.Drugs, n.OtherBins, n.OtherNorms, 
                                    mean.target, prop.target, bin.props, nor.means, across.vars, var.names)
     
@@ -719,6 +739,7 @@ complete_parameters = function(parameters, n) {
   parameters$across.var = parameters$across.SD ^ 2
   
   # ARBITRARILY SET WITHIN-S VARIANCE TO 1/3 OF ACROSS-S VARIANCE
+  # MAKE THIS MORE GENERAL - HAVE AS ARGUMENT AND ONLY DO THIS IF IT'S EMPTY
   var.index = parameters$type %in% c("normal.other", "time.function")  # index of variables to consider
   within.var.vector = parameters$within.var[var.index]
   across.var.vector = parameters$across.var[var.index]
