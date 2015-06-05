@@ -19,6 +19,11 @@ n.Reps = 1
 # n.Drugs (number of drug variables)
 n.Drugs = 2
 
+setwd("/Users/mmathur/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/GENCOV/vignettes")
+parameters = read.csv("ex1_parameters.csv")
+cat.parameters = read.csv("ex1_categorical_parameters.csv")
+pcor = read.csv("ex1_pcor.csv")
+wcorin = read.csv("ex1_wcor.csv")
 
 
 # load required libraries
@@ -71,17 +76,20 @@ l_ply( c( 1:getDoParWorkers() ), .parallel=T, function(.item, .n.Subj, .obs, .n.
 
   
   # TEMPORARY!!
-	.n.Subj = 50
-	.obs = 4
+	.n.Subj = 5
+	.obs = 7
 	.n.Reps = 1
 	.n.Drugs = 2
+  .name_prefix="name_prefix"
   
   # simulate results
   results = repeat_sim(n=.n.Subj, obs=.obs, parameters=parameters, prop.target=NULL,
                        mean.target=NULL, n.Drugs=.n.Drugs, 
                        pcor=pcor, wcorin=wcorin, n.Reps=.n.Reps,
                        race.names=race.names, write.data=TRUE,
-                       name_prefix= paste( .name_prefix, WORKER.ID, sep="_" ) )
+                       #name_prefix= paste( .name_prefix, WORKER.ID, sep="_" ),  # used with Sherlock
+                       name_prefix=.name_prefix,
+                       cat.parameters=cat.parameters )
 
 }, n.Subj, obs, n.Reps, n.Drugs, name_prefix)
 

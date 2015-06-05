@@ -8,6 +8,10 @@
 #  a large number of patients over time.
 #
 # -This file loads all necessary functions. 
+#
+# USAGE NOTES
+#  1.) If the type field in parameters matrix has "static" in its name, it will be overridden using S' first observation.
+#  2.) Must put in "ref" as the beta for one entry in categorical parameters matrix.
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ############################## LOAD PACKAGES ##############################
@@ -87,6 +91,7 @@ proportionize = function(x, zero, one) {
 # data: dataframe from which to generate
 
 make_one_linear_pred = function(m, data) {
+
   # pull out relevant parameters except intercept
   if ( !any(m$parameter == "intercept") ) stop("Intercept is missing in categorical variable parameter matrix")
   m2 = m[ m$parameter!="intercept", ]  # matrix without intercept
@@ -158,14 +163,41 @@ add_one_categorical = function(d, n, obs, cat.parameters) {
   cat.var = t(do.call("cbind", cat.var))
   
   # put new variables in dataframe
-  return( merge(d, cat.var) )
+  return( cbind(d, as.data.frame(cat.var) ) )
 }
 
 #test - works :)
 #setwd("/Users/mmathur/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/GENCOV/vignettes")
 #d = read.csv("test_d2.csv")  # this was exported from make_one_dataset right before entering this function
+#cat.parameters = read.csv("ex1_categorical_parameters.csv")
 #n=50
 #obs=4
+#d3 = add_one_categorical(d, n, obs, cat.parameters)
+
+
+############################## FUNCTION: OVERRIDE A STATIC VARIABLE ##############################
+
+# BOOKMARK
+# use this at the very end of repeat_sim to override sex, race, etc.
+# have a column in parameters matrix where you can specify that it's static
+# also in categorical params matrix
+
+# if the categorical is supposed to only depend on baseline, this is already handled b/c
+#  we are going to keep only the first observation. 
+
+
+override_static = function(.static.var.name, .id.var.name="id", .d, .obs) {
+  # first observations over this variable for each subject
+  .first.obs = .d[[ .static.var.name ]][ !duplicated( .d[[ .id.var.name ]] ) ] 
+  
+  # expand for the number of observations by subject and replace in dataframe
+  .d[[ .static.var.name ]] = rep(.first.obs, each=.obs) 
+  return(.d)
+}
+
+# test: works :)
+# d3 is from the add_one_categorical example above
+#override_static("weight", "id", d3, 4)
 
 
 ############################## FUNCTION: EXPAND SUBJECTS ##############################
@@ -186,7 +218,7 @@ expand_subjects = function(mus3, n.OtherNorms, n.OtherBins, n.Drugs, wcorin, obs
   dat = vector("list", n)
   
   for (s in 1:n) {
-    staticBins = mus3[ s, 1:n.OtherBins ] #subset the matrix to get static (non-time-varying) binaries for subject s
+    staticBins = mus3[ s, 1:n.OtherBins ] # subset the matrix to get static (non-time-varying) binaries for subject s
     drugProbs = mus3[ s, (n.OtherBins + 1):(n.OtherBins + n.Drugs) ] # subset the matrix to get binaries for subject s
     normMeans = mus3[ s, (n.OtherBins + n.Drugs + 1) : ncol(mus3) ] # subset the matrix to get the non-drug normals for subject s
     
@@ -196,7 +228,7 @@ expand_subjects = function(mus3, n.OtherNorms, n.OtherBins, n.Drugs, wcorin, obs
     wcorin2 = as.matrix(wcorin)
     
     # change the correlations to 0s where pdrugs = zero
-    # SHOULD WE ALSO DO THIS WHEN PDRUGS = 1? DOES THIS EVEN HAPPEN?
+    # **SHOULD WE ALSO DO THIS WHEN PDRUGS = 1? DOES THIS EVEN HAPPEN?**
     for (r in zerodrugs){ 
       wcorin2[,r] = 0
       wcorin2[r,] = 0
@@ -231,13 +263,14 @@ expand_subjects = function(mus3, n.OtherNorms, n.OtherBins, n.Drugs, wcorin, obs
 # pcor: across-subject correlation matrix
 # wcorin: within-subject correlation matrix
 
-make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcorin) {  
+make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcorin, cat.parameters) {  
 
   ### step 0.1 - extract parameter vectors from given dataframe
   bin.props = parameters$prop[ parameters$type == "bin.other" | parameters$type == "bin.drug" ]  # = bin.props
   nor.means = parameters$across.mean[ parameters$type %in% c("normal.drug", "normal.other", "time.function") ]  # = nor.means
   across.vars = parameters$across.var[ parameters$type %in% c("normal.drug", "normal.other", "time.function") ]  # = across.vars
-
+  static.var.names = parameters$name[grep("static", parameters$type)]  # names of static variables
+  
   ### step 0.2 - number of different types of variables
   n.BinVars = length( bin.props )  # number binary variables (16)
   n.NormVars = length( nor.means )  # number normal variables
@@ -282,22 +315,32 @@ make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcorin) {
             as.character(parameters$name[parameters$type=="bin.drug"]))
   names(d2) = names
   
-  browser()
-  
   ### step 3.1 - dummy-code variables for race model
-  d3 = add_dummy_vars(d2)
+  #d3 = add_dummy_vars(d2)
 
-  ### step 3.2 - add race ###
- # d4 = add_race(d3, n, obs)
-  
+  ### step 3.2 - add a single categorical variable ###
+  d3=d2
+  d4 = add_one_categorical(d3, n, obs, cat.parameters)
+
   ### step 3.3 - add time-function variables ###
   d5 = add_time_function_vars(d4, obs, parameters)
-    
+  
+  ### step 3.4 - override static variables ###
+  for (i in static.var.names) {
+    d5 = override_static(.static.var.name=i, .id.var.name="id", .d=d5, .obs=obs)
+  }
+  
+  browser()
+  
   sim = list("data" = d5, "everUser" = everUser)
   return(sim)
 }
 
 
+
+######################### FUNCTION: LONGITUDINALLY EXPAND MATRIX #########################
+
+# ** MAKE MORE EFFICIENT**
 
 ##### Function: longitudinally expand a matrix of single observations by subject
 # repeat each subject's entry in each row for obs number of times
@@ -541,7 +584,7 @@ dataset_performance = function(sim, n, obs, n.Drugs, n.OtherBins, n.OtherNorms,
 # write.data: should R write all the generated datasets to csv files?
 
 
-repeat_sim = function(n, obs, parameters, prop.target = NULL, mean.target = NULL, n.Drugs, 
+repeat_sim = function(n, obs, parameters, cat.parameters, prop.target = NULL, mean.target = NULL, n.Drugs, 
                        pcor, wcorin, n.Reps, race.names, write.data=FALSE, name_prefix) {
 
   ##### extract parameters from parameter matrix #####
@@ -570,7 +613,7 @@ repeat_sim = function(n, obs, parameters, prop.target = NULL, mean.target = NULL
 
   ##### simulate data n.Reps times, adding each entry to results list #####
   for (i in 1:n.Reps) {
-    sim = make_one_dataset(n, obs, parameters, n.Drugs, pcor, wcorin)
+    sim = make_one_dataset(n, obs, parameters, n.Drugs, pcor, wcorin, cat.parameters)
     
     newEntry = dataset_performance(sim, n, obs, n.Drugs, n.OtherBins, n.OtherNorms, 
                                    mean.target, prop.target, bin.props, nor.means, across.vars, var.names)
