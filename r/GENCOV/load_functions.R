@@ -177,7 +177,6 @@ add_one_categorical = function(d, n, obs, cat.parameters) {
 
 ############################## FUNCTION: OVERRIDE A STATIC VARIABLE ##############################
 
-# BOOKMARK
 # use this at the very end of repeat_sim to override sex, race, etc.
 # have a column in parameters matrix where you can specify that it's static
 # also in categorical params matrix
@@ -207,7 +206,7 @@ override_static = function(.static.var.name, .id.var.name="id", .d, .obs) {
 # wcorin: within-subject correlation matrix
 # obs: number of observations per subject to generate
 
-expand_subjects = function(mus3, n.OtherNorms, n.OtherBins, n.Drugs, wcorin, obs) {
+expand_subjects = function(mus3, n.OtherNorms, n.OtherBins, n.Drugs, wcor, obs) {
   
   # number of subjects
   n = dim(mus3)[1]
@@ -225,7 +224,7 @@ expand_subjects = function(mus3, n.OtherNorms, n.OtherBins, n.Drugs, wcorin, obs
     zerodrugs = which(drugProbs==zero) # which drugs have p = 0?
     
     # within-subject correlation matrix
-    wcorin2 = as.matrix(wcorin)
+    wcorin2 = as.matrix(wcor)
     
     # change the correlations to 0s where pdrugs = zero
     # **SHOULD WE ALSO DO THIS WHEN PDRUGS = 1? DOES THIS EVEN HAPPEN?**
@@ -263,7 +262,7 @@ expand_subjects = function(mus3, n.OtherNorms, n.OtherBins, n.Drugs, wcorin, obs
 # pcor: across-subject correlation matrix
 # wcorin: within-subject correlation matrix
 
-make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcorin, cat.parameters) {  
+make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcor, cat.parameters) {  
 
   ### step 0.1 - extract parameter vectors from given dataframe
   bin.props = parameters$prop[ parameters$type == "bin.other" | parameters$type == "bin.drug" ]  # = bin.props
@@ -278,11 +277,15 @@ make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcorin, cat.param
   n.OtherBins = n.BinVars - n.Drugs  # number of non-drug binary variables
   n.Vars = n.OtherBins + n.OtherNorms + n.Drugs  # total number of variables in study (not double-counting drugs)
   
+  
+  ## step XX - convert population cor matrix into vectors to appease Demirtas function
+  pcor.vec = upper_tri_vec(pcor)
+  
   ### step 1.0 - generate mu for each person
   mus0 = mod.jointly.generate.binary.normal( no.rows = n, no.bin = n.BinVars, no.nor = n.NormVars,
                                               prop.vec.bin = bin.props, 
                                               mean.vec.nor = nor.means,
-                                              var.nor = across.vars, corr.vec = pcor )
+                                              var.nor = across.vars, corr.vec = pcor.vec )
   
   ### step 1.1 - if drug indicator is 0, then convert probability of receiving drug to 0
   mus1 = override_drug_probs(mus0, n.Drugs)
@@ -303,7 +306,7 @@ make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcorin, cat.param
   
   
   ### step 2 - generate time-varying data for each person
-  d1 = expand_subjects(mus3, n.OtherNorms, n.OtherBins, n.Drugs, wcorin, obs)
+  d1 = expand_subjects(mus3, n.OtherNorms, n.OtherBins, n.Drugs, wcor, obs)
 
   ### step 3 - add patient id, ever-use indicators, and variable names
   id = rep(1:n, each=obs)
@@ -314,7 +317,7 @@ make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcorin, cat.param
             as.character(parameters$name[parameters$type %in% c("normal.other", "time.function")]), 
             as.character(parameters$name[parameters$type=="bin.drug"]))
   names(d2) = names
-  
+
   ### step 3.1 - dummy-code variables for race model
   #d3 = add_dummy_vars(d2)
   # the above function is specific to PCORI and isn't used in the general version of the code
@@ -331,7 +334,12 @@ make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcorin, cat.param
     d5 = override_static(.static.var.name=i, .id.var.name="id", .d=d5, .obs=obs)
   }
   
-  sim = list("data" = d5, "everUser" = everUser)
+  ### output correlation matrix difference ###
+  o = cor(mus0)
+  names(o) = names(pcor); row.names(o) = names(pcor)
+  bias = o - pcor; row.names(bias) = names(bias)
+  
+  sim = list("data" = d5, "ever.user" = everUser, "corr" = o, "corr.bias" = bias)
   return(sim)
 }
 
@@ -574,7 +582,7 @@ dataset_performance = function(sim, n, obs, n.Drugs, n.OtherBins, n.OtherNorms,
 # across.vars: vector of variances for normal variables
 
 #n.Drugs: number of drugs
-#pcor: population correlation vector
+#pcor: population correlation matrix
 #wcorin: population correlation matrix
 
 # n.Reps: number of datasets to generate
@@ -584,7 +592,7 @@ dataset_performance = function(sim, n, obs, n.Drugs, n.OtherBins, n.OtherNorms,
 
 
 repeat_sim = function(n, obs, parameters, cat.parameters, prop.target = NULL, mean.target = NULL, n.Drugs, 
-                       pcor, wcorin, n.Reps, write.data=FALSE, write.perform=FALSE, name_prefix) {
+                       pcor, wcor, n.Reps, write.data=FALSE, write.perform=FALSE, name_prefix) {
   
   ##### extract parameters from parameter matrix #####
   bin.props = parameters$prop[parameters$type == "bin.other" | parameters$type == "bin.drug"]  # = bin.props
@@ -598,8 +606,8 @@ repeat_sim = function(n, obs, parameters, cat.parameters, prop.target = NULL, me
   drug.prop.names = parameters$name[parameters$type=="normal.drug"]
 
   ### if proportion and mean performance targets aren't set, use the parameters around which we're actually generating
-  if ( is.null(prop.target) ) prop.target=bin.props
-  if ( is.null(mean.target) ) mean.target=nor.means
+  #if ( is.null(prop.target) ) prop.target=bin.props
+  #if ( is.null(mean.target) ) mean.target=nor.means
   
   ##### compute numbers of different types of variables #####
   n.BinVars = length(bin.props) # number binary variables
@@ -608,11 +616,11 @@ repeat_sim = function(n, obs, parameters, cat.parameters, prop.target = NULL, me
   n.OtherBins = n.BinVars - n.Drugs # number of non-drug binary variables
   
   ##### initialize results list #####
-  results = make_result_list()
+  #results = make_result_list()
 
   ##### simulate data n.Reps times, adding each entry to results list #####
   for (i in 1:n.Reps) {
-    sim = make_one_dataset(n, obs, parameters, n.Drugs, pcor, wcorin, cat.parameters)
+    sim = make_one_dataset(n, obs, parameters, n.Drugs, pcor, wcor, cat.parameters)
     
     # DATASET PERFORMANCE STUFF - NOT IN USE
     #newEntry = dataset_performance(sim, n, obs, n.Drugs, n.OtherBins, n.OtherNorms, 
@@ -627,8 +635,8 @@ repeat_sim = function(n, obs, parameters, cat.parameters, prop.target = NULL, me
     }
   }
   
-  # return the last generated dataset (or the only one if n.Reps=1)
-  return(sim$data)
+  # return the last generated list (or the only one if n.Reps=1)
+  return(sim)
 }
 
 
