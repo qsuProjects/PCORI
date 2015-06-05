@@ -317,6 +317,7 @@ make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcorin, cat.param
   
   ### step 3.1 - dummy-code variables for race model
   #d3 = add_dummy_vars(d2)
+  # the above function is specific to PCORI and isn't used in the general version of the code
 
   ### step 3.2 - add a single categorical variable ###
   d3=d2
@@ -329,8 +330,6 @@ make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcorin, cat.param
   for (i in static.var.names) {
     d5 = override_static(.static.var.name=i, .id.var.name="id", .d=d5, .obs=obs)
   }
-  
-  browser()
   
   sim = list("data" = d5, "everUser" = everUser)
   return(sim)
@@ -585,8 +584,8 @@ dataset_performance = function(sim, n, obs, n.Drugs, n.OtherBins, n.OtherNorms,
 
 
 repeat_sim = function(n, obs, parameters, cat.parameters, prop.target = NULL, mean.target = NULL, n.Drugs, 
-                       pcor, wcorin, n.Reps, race.names, write.data=FALSE, name_prefix) {
-
+                       pcor, wcorin, n.Reps, write.data=FALSE, write.perform=FALSE, name_prefix) {
+  
   ##### extract parameters from parameter matrix #####
   bin.props = parameters$prop[parameters$type == "bin.other" | parameters$type == "bin.drug"]  # = bin.props
   nor.means = parameters$across.mean[ parameters$type %in% c("normal.drug", "normal.other", "time.function") ]  # = nor.means
@@ -615,12 +614,12 @@ repeat_sim = function(n, obs, parameters, cat.parameters, prop.target = NULL, me
   for (i in 1:n.Reps) {
     sim = make_one_dataset(n, obs, parameters, n.Drugs, pcor, wcorin, cat.parameters)
     
-    newEntry = dataset_performance(sim, n, obs, n.Drugs, n.OtherBins, n.OtherNorms, 
-                                   mean.target, prop.target, bin.props, nor.means, across.vars, var.names)
-    
+    # DATASET PERFORMANCE STUFF - NOT IN USE
+    #newEntry = dataset_performance(sim, n, obs, n.Drugs, n.OtherBins, n.OtherNorms, 
+     #                              mean.target, prop.target, bin.props, nor.means, across.vars, var.names)
     # add the new entry as a new "row" in the results list
-    results = Map( function(x,y) Map(rbind, x, y), results, newEntry )
-    
+   # results = Map( function(x,y) Map(rbind, x, y), results, newEntry )
+ 
     # optionally, write the dataset to a csv file in current working directory
     if(write.data) {
       file.name = paste(Sys.Date(), name_prefix, "dataset", i, sep="_" )
@@ -628,30 +627,8 @@ repeat_sim = function(n, obs, parameters, cat.parameters, prop.target = NULL, me
     }
   }
   
-  
-  # 
-  
-  ##### put in variable names  #####
-  names(results$prop.male$abs.bias) = other.bin.names
-  names(results$prop.male$std.bias) = other.bin.names
-  names(results$prop.male$coverage) = other.bin.names
-  
-  names(results$other.normals$abs.bias) = normal.names
-  names(results$other.normals$std.bias) = normal.names
-  names(results$other.normals$coverage) = normal.names
-  
-  names(results$drug.evers$abs.bias) = drug.ever.names
-  names(results$drug.evers$std.bias) = drug.ever.names
-  names(results$drug.evers$coverage) = drug.ever.names
-  
-  names(results$prop.drug.time$abs.bias) = drug.prop.names
-  names(results$prop.drug.time$std.bias) = drug.prop.names
-  names(results$prop.drug.time$coverage) = drug.prop.names
-  
-  # NOTE: THIS LINE GIVES DIMENSION-MATCH ERROR IF WE DON'T GENERATE PEOPLE OF ALL 3 RACES
-  names(results$race$prop.table) = race.names
-  
-  return(results)
+  # return the last generated dataset (or the only one if n.Reps=1)
+  return(sim$data)
 }
 
 

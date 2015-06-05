@@ -1,17 +1,17 @@
 
-######################### RUN IN PARALLEL #########################
+######################### SET SIMULATION PARAMETERS #########################
 
-# the number of clusters to use
-n_clusters = 2
+library(ggplot2)
+
 
 # name prefix for all datasets
 name_prefix = "ex1"
 
 # n (number of subjects)
-n.Subj = 50
+n.Subj = 1000
 
 # obs (number of observations per subject)
-obs = 4
+obs = 7
 
 # n.Reps (number of datasets that each worker should generate)
 n.Reps = 1
@@ -20,91 +20,67 @@ n.Reps = 1
 n.Drugs = 2
 
 setwd("/Users/mmathur/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/GENCOV/vignettes")
-parameters = read.csv("ex1_parameters.csv")
+
+# read in and complete parameters dataframe
+parameters = complete_parameters( read.csv("ex1_parameters.csv"), n.Subj )
+
 cat.parameters = read.csv("ex1_categorical_parameters.csv")
-pcor = read.csv("ex1_pcor.csv")
-wcorin = read.csv("ex1_wcor.csv")
 
 
-# load required libraries
-library(plyr)
-library(doSNOW)
+# within-subject correlation matrix
+wcorin = read.csv("ex1_wcor.csv", header=FALSE)[-1,-1]
+wcor = as.numeric(t(wcorin)[lower.tri(wcorin)]) #it gets read in by rows
 
-#set up parallelization backend
-cl = makeCluster(n_clusters)
-registerDoSNOW(cl)
+# population correlation matrix
+pcorin = read.csv("ex1_pcor.csv", header=FALSE)[-1,-1]
+pcor = as.numeric(t(pcorin)[lower.tri(pcorin, diag=F)]) # need to transpose and read in the lower half to convert the a matrix into vector by row
 
-#these should be equal
-n_clusters
-getDoParWorkers()
-
-#give each worker an ID 
-#this is optional, but occasionally is useful 
-#in situations where you need workers to write data
-#every worker writing to the same file will result in 
-#uncaught errors and partially overwritten data
-#worker ids enable each worker to write to its own set of 
-#files
-clusterApply(cl, seq(along=cl), function(id) WORKER.ID <<- paste0("worker_", id))
+setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/GENCOV")
+source("jointly_generate_binary_normal_modified_v2.R", local=TRUE)
+source("load_functions.R", local=TRUE)
+#source("init_variables.R", local=TRUE)  # this is PCORI-specific
 
 
-#example:
-#each worker here runs a t test on simulated data and
-#writes to a worker-specific file
+######################### SIMULATE ########################
 
-time = system.time({
-
-l_ply( c( 1:getDoParWorkers() ), .parallel=T, function(.item, .n.Subj, .obs, .n.Reps, .n.Drugs, .name_prefix) {  
-  #l_ply iterates through each element of its first argument, here c(1:1000), and passes each element to
-  #function() as .item    
-  #instead of c(1:1000), you could pass l_ply() a list where each element is a set of subject specific means
-  #then each worker/iteration would expand those means into a full set of data for that subject
-  #avoid workers writing to the same file
-  #if each worker/iteration generates data for one subject, you will also need to write code that stitches
-  #all subject data together into one data file.
-  
-  #everything in here will be performed by workers in parallel    
-  #packages and source functions used by workers should be loaded within the this block
-  
-  # FOR SOME REASON THIS NEEDS TO BE SET GLOBALLY - WHY?
-	#n=50
-
-	setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/GENCOV")
-	source("jointly_generate_binary_normal_modified_v2.R", local=TRUE)
-  source("load_functions.R", local=TRUE)
-  source("init_variables.R", local=TRUE)
-
-  
-  # TEMPORARY!!
-	.n.Subj = 5
-	.obs = 7
-	.n.Reps = 1
-	.n.Drugs = 2
-  .name_prefix="name_prefix"
-  
-  # simulate results
-  results = repeat_sim(n=.n.Subj, obs=.obs, parameters=parameters, prop.target=NULL,
-                       mean.target=NULL, n.Drugs=.n.Drugs, 
-                       pcor=pcor, wcorin=wcorin, n.Reps=.n.Reps,
-                       race.names=race.names, write.data=TRUE,
+# simulate results
+d = repeat_sim(n=n.Subj, obs=obs, parameters=parameters, prop.target=NULL,
+                       mean.target=NULL, n.Drugs=n.Drugs, 
+                       pcor=pcor, wcorin=wcorin, n.Reps=n.Reps,
+                       write.data=TRUE,
                        #name_prefix= paste( .name_prefix, WORKER.ID, sep="_" ),  # used with Sherlock
-                       name_prefix=.name_prefix,
+                       name_prefix=name_prefix,
                        cat.parameters=cat.parameters )
 
-}, n.Subj, obs, n.Reps, n.Drugs, name_prefix)
 
-})
+######################### HOW'D WE DO? ########################
+
+##### Refit Race Model #####
+summary( glm(black ~ male, data=d, family=binomial(link="logit")) )
+summary( glm(other ~ male, data=d, family=binomial(link="logit")) )
+# pretty good
 
 
+##### Example of Time-Function Variable #####
+# look at time-trajectories of blood pressure
+# take random sample of subjects
+n = 20; keepers = sample( unique(d$id), size=n )
+temp = d[ d$id %in% keepers, ]
 
-# write a file about the simulation parameters
-write(
-x = paste("There were ", getDoParWorkers(), " workers",
-          "\nDatasets were generated with n=", n.Subj, ", obs=", obs, ", n.Reps=",
-          n.Reps, ", n.Drugs=", n.Drugs,
-          "\nThe entire process took ", time[3]/(60*60), " hours",
-          sep="" )
-, file= paste( name_prefix, "simulation_info.txt", sep="_" )
-)
+# add a time variable for plotting purposes
+temp$t = rep(1:obs, n.Subj)
 
+# plot growth curves
+ggplot( data=temp, aes(x=t, y=bp) ) + geom_point() + geom_line() +
+  facet_wrap(~id) + theme_bw() + xlab("Time") + ylab("Blood pressure")
+
+
+##### Example of Normal Variable Clustered within a Subject #####
+temp = d[ d$id %in% 1:6, ]  # look at first 6 subjects
+ggplot( data=temp, aes(x=id, y=weight, group=id) ) + geom_boxplot() +
+  theme_bw() + xlab("Subject ID") + ylab("Weight")
+
+
+##### Look at Correlation Matrix Across Subjects #####
+# put in Kris' code
 

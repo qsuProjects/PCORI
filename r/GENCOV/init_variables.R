@@ -62,9 +62,9 @@
 ######################### SET GLOBAL VARIABLES #########################
 
 # these will be constant for all simulations
-n.Drugs = 15  # number of drugs
-n.OtherBins = 1
-n.OtherNorms = 9
+#n.Drugs = 15  # number of drugs
+#n.OtherBins = 1
+#n.OtherNorms = 9
 race.names = c("white", "black", "other")
 
 zero = 0.000000000000000000000000001
