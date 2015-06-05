@@ -3,6 +3,32 @@
 
 library(ggplot2)
 
+# source code from GitHub
+source_url("https://raw.githubusercontent.com/qsuProjects/PCORI/master/r/GENCOV/load_functions.R")
+
+
+# read in and complete parameters dataframe
+
+parameters = complete_parameters( read.csv("https://raw.githubusercontent.com/qsuProjects/PCORI/master/r/GENCOV/vignettes/ex1_parameters.csv"), n.Subj )
+
+
+parameters = complete_parameters( read.csv("ex1_parameters.csv"), n.Subj )
+
+cat.parameters = read.csv("ex1_categorical_parameters.csv")
+
+
+# within-subject correlation matrix
+wcor = read.csv("ex1_wcor.csv", header=FALSE)[-1,-1]
+
+# population correlation matrix
+pcor = read.csv("ex1_pcor.csv", header=TRUE)[,-1]
+
+setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/GENCOV")
+source("jointly_generate_binary_normal_modified_v2.R", local=TRUE)
+#source("load_functions.R", local=TRUE)
+
+
+######################### SET SIMULATION PARAMETERS #########################
 
 # name prefix for all datasets
 name_prefix = "ex1"
@@ -13,30 +39,11 @@ n.Subj = 1000
 # obs (number of observations per subject)
 obs = 7
 
-# n.Reps (number of datasets that each worker should generate)
+# n.Reps (number of datasets to generate)
 n.Reps = 1
 
 # n.Drugs (number of drug variables)
 n.Drugs = 2
-
-setwd("/Users/mmathur/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/GENCOV/vignettes")
-
-# read in and complete parameters dataframe
-parameters = complete_parameters( read.csv("ex1_parameters.csv"), n.Subj )
-
-cat.parameters = read.csv("ex1_categorical_parameters.csv")
-
-
-# within-subject correlation matrix
-wcor = read.csv("ex1_wcor.csv", header=FALSE)[-1,-1]
-
-# population correlation matrix
-pcor.old = read.csv("ex1_pcor.csv", header=FALSE)[-1,-1]
-pcor = read.csv("ex1_pcor.csv", header=TRUE)[,-1]
-
-setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/GENCOV")
-source("jointly_generate_binary_normal_modified_v2.R", local=TRUE)
-source("load_functions.R", local=TRUE)
 
 
 ######################### SIMULATE ########################
@@ -55,7 +62,7 @@ d = sim$data
 head(d)
 
 
-######################### HOW'D WE DO? ########################
+######################### QUICK TOUR THROUGH THE SIMULATED DATA ########################
 
 ##### Example of Categorical Variable #####
 # refit the models that generated race
