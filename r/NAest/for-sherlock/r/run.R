@@ -16,7 +16,7 @@ event.name="d"
 cluster.name="id"
 cox.predictors = c("d_abac")
 na.methods = c("naive", "frailty", "log-t")
-write.path = "/share/PI/manishad/naEst"
+write.path = "/share/PI/manishad/naEst/output"
 miss.matrix = read.csv("/share/PI/manishad/naEst/missing_var_parameters_matrix.csv")
 
 # RUN BY MANISHA!

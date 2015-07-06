@@ -175,24 +175,26 @@ generateSbatch <- function(sbatch_params, runfile_path = NA, run_now = F) {
 }
 
 
+# vector of dataset paths and names
+data.wd = "/scratch/PI/manishad/PCORI/genSurv/output/covariates"
+data.paths = paste(data.wd, list.files(data.wd)[1:5], sep="/")  # ONLY DOES FIRST 5 FILES FOR NOW!
 
-# EDIT THIS LINE EACH TIME
-n.files = 1
+n.files = length(data.paths)
 
-# EDIT THIS LINE EACH TIME
-path = "/share/PI/manishad/naEst"
+dir.path = "/share/PI/manishad/naEst"
 
 jobname = paste("job", 1:n.files, sep="_")
 outfile = paste("rm_naEst_", 1:n.files, ".out", sep="")
 errorfile = paste("rm_naEst_", 1:n.files, ".err", sep="")
-write_path = paste(path, "/sbatch/", 1:n.files, ".sbatch", sep="")
-runfile_path = paste(path, "/testRunFile.R", sep="")
+write_path = paste(dir.path, "/sbatch/", 1:n.files, ".sbatch", sep="")
+runfile_path = paste(dir.path, "/testRunFile.R", sep="")
+
 
 
 sbatch_params <- data.frame(jobname,
                             outfile,
                             errorfile,
-                            jobtime = "00:05:00",
+                            jobtime = "00:20:00",
                             quality = "normal",
                             node_number = 1,
                             mem_per_node = 16000,
@@ -200,8 +202,8 @@ sbatch_params <- data.frame(jobname,
                             user_email = "mmathur@stanford.edu",
                             tasks_per_node = 1,
                             cpus_per_task = 1,
-                            path_to_r_script = paste(path, "/r/run.R", sep=""),
-                            args_to_r_script = paste( "--args /share/PI/manishad/naEst/test-data.csv test-job", sep="" ) ,
+                            path_to_r_script = paste(dir.path, "/r/run.R", sep=""),
+                            args_to_r_script = paste( "--args", data.paths, jobname, sep=" " ) ,
                             write_path,
                             stringsAsFactors = F,
                             server_sbatch_path = NA)
@@ -211,7 +213,7 @@ generateSbatch(sbatch_params, runfile_path)
 
 # run them all
 # works
-setwd( paste(path, "/sbatch", sep="") )
+setwd( paste(dir.path, "/sbatch", sep="") )
 for (i in 1:n.files) {
   system( paste("sbatch ", i, ".sbatch -p manishad", sep="") )
 }
