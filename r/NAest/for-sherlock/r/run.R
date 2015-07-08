@@ -14,7 +14,7 @@ name.prefix = args[2]
 time.name="t"
 event.name="d"
 cluster.name="id"
-cox.predictors = c("d_abac")
+cox.predictors = c("ind_cd4_50_100", "ind_cd4_350_500", "ind_cd4_200_350", "ind_cd4_100_200", "d_dida")
 na.methods = c("naive", "frailty", "log-t")
 write.path = "/share/PI/manishad/naEst/output"
 miss.matrix = read.csv("/share/PI/manishad/naEst/missing_var_parameters_matrix.csv")
@@ -26,8 +26,7 @@ dont.impute.with = c("X", "bmi", "bmi_slope", "cd4", "cd4_slope", "log_vln_slope
                      "linpred", "frailty", "xB", "t", "t0", "proportion_censored",
                      "source_file", "vln_cat", "bmi_cuts", "log_vln",
                      
-                     "ind_cd4_350_500", "ind_cd4_200_350", "ind_cd4_100_200",
-                     "ind_cd4_50_100", "ind_bmi_gt_30", 
+                    "ind_bmi_gt_30", 
                      
                      "ind_bmi_25_30", "ind_bmi_lt_20"
                      )

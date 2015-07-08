@@ -301,7 +301,7 @@ make_missing_indics = function( data, miss.matrix ) {
 
 # assumes that missing indicators are titled "miss.myVar"
 
-missingify = function( data, make.relateds.missing ) { 
+missingify = function( data, make.relateds.missing, make.miss.if.contains=NULL ) { 
   # extract missing indicators
   miss.indic.names = names(data)[ substr( names(data), 0, 4 )=="miss" ]
 
@@ -311,11 +311,19 @@ missingify = function( data, make.relateds.missing ) {
     is.missing = (data[[i]]==1)  # vector of missing indicators
     data[[orig.var.name]][is.missing] = NA
     
-    if (make.relateds.missing) {
+    if (make.relateds.missing | !is.null(make.miss.if.contains)) {
+      
       # find names of "related" variables
       # where a "related" variable is one whose name contains the original variable name
-      related.names = names(data)[ grep( orig.var.name, names(data) ) ]
+      if (make.relateds.missing) {
+        related.names = names(data)[ grep( orig.var.name, names(data) ) ]
+      } else {
+        related.names = c()
+      }
       
+      # or, find variables containing the desired string
+      if ( !is.null(make.miss.if.contains) ) related.names = c(related.names, names(data)[ grep( make.miss.if.contains, names(data) ) ] )
+    
       cat("\n\nVariables made missing:\n")
       cat(related.names)
 

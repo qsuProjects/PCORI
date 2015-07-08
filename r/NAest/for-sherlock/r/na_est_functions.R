@@ -25,43 +25,87 @@ library(coxme)
 
 ############################## LOCAL TEST ##############################
 
-#write.path="~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NA estimators/local-test"
-#file.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NA estimators/local-test/SURV_2015-02-01_job_10_dataset_1.csv"
-#miss.matrix.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NA estimators/local-test/missing_var_parameters_matrix.csv"
+write.path="~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test"
+file.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test/SURV_2015-02-01_job_10_dataset_1.csv"
+miss.matrix.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test/missing_var_parameters_matrix.csv"
+file.name="fake_file_name_2_@.csv"
 
 # my impose missingness code
 #source("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/IMPMISS/Code/impose_missingness_functions.R")
 
-#.d = read.csv(file.path)
-#.d = .d[1:1000,]  # small one just for debugging
-#.miss.matrix = read.csv(miss.matrix.path)
+d = read.csv(file.path)
+d = d[1:2000,]  # small one just for debugging
+miss.matrix = read.csv(miss.matrix.path)
 
-#.write.path="~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NA estimators/local-test"
-#.name.prefix = "dataset_1"
+name.prefix = "dataset_2"
 
+
+time.name="t"
+event.name="d"
+cluster.name="id"
+cox.predictors = c("ind_cd4_50_100", "ind_cd4_350_500", "ind_cd4_200_350", "ind_cd4_100_200", "d_dida")
+na.methods = c("naive", "frailty", "log-t")
+
+# RUN BY MANISHA!
+dont.impute.with = c("X", "bmi", "bmi_slope", "cd4", "cd4_slope", "log_vln_slope",
+                     "ldl_slope", "hdl_slope", "log_vln_5", "log_vln_4",
+                     "log_vln_3", "log_vln_2", "cd4_cuts", "racecatexp",
+                     "linpred", "frailty", "xB", "t", "t0", "proportion_censored",
+                     "source_file", "vln_cat", "bmi_cuts", "log_vln",
+                     
+                     "ind_bmi_gt_30", "ind_bmi_25_30", "ind_bmi_lt_20"                  
+                      )
+
+make.miss.if.contains="cd4"
+
+
+
+do_one_dataset(.d=d, .source.file.name=file.name, .miss.matrix=miss.matrix, .time.name=time.name,
+               .event.name=event.name, .cluster.name=cluster.name,
+               .cox.predictors=cox.predictors, .name.prefix=name.prefix,
+               .na.methods=na.methods, .write.path=write.path,
+               .dont.impute.with = dont.impute.with,
+               .make.miss.if.contains=make.miss.if.contains
+              )
+
+
+stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test",
+              "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test",
+              .name.prefix="results",
+              .stitch.file.name="stitched.csv"
+              )
 
 
 ############################## FUNCTION: DO ONE DATASET ##############################
 
-do_one_dataset = function(.d, .miss.matrix, .time.name, .event.name, .cluster.name,
+do_one_dataset = function(.d, .source.file.name, .miss.matrix, .time.name, .event.name, .cluster.name,
                           .cox.predictors, .name.prefix, .na.methods, .write.path,
-                          .dont.impute.with) {
-  
+                          .dont.impute.with, .make.miss.if.contains=NULL) {
+
   ##### Impose Missingness (MAR) ####
   d2 = make_missing_indics(data=.d, miss.matrix=.miss.matrix)
-  d3 = missingify(d2, make.relateds.missing=FALSE)
+  d3 = missingify(d2, make.relateds.missing=FALSE, make.miss.if.contains=.make.miss.if.contains)
   
   for (i in .na.methods) {  # do once for each NA estimator method
     d4 = d3
     
     ##### Get NA Estimator ####
-    if (i == "naive") { d4$estim = calc_NA_naive(time=d4[[.time.name]], event=d4[[.event.name]]) }
-    if (i == "strat") { d4$estim = calc_NA_strat(time=d4[[.time.name]], event=d4[[.event.name]],
-                                                 cluster=d4[[.cluster.name]], data=d4) }
+    if (i == "naive") { d4$estim = calc_NA(.time.name=.time.name,
+                                          .event.name=.event.name, .type="naive",
+                                          .data=d4) }
+    if (i == "strat") { d4$estim = calc_NA_strat(time=d4[[.time.name]],
+                                                 event=d4[[.event.name]], cluster=d4[[.cluster.name]], data=d4) }
     
-    if (i == "frailty") { d4$estim = calc_NA_frailty(time=d4[[.time.name]], event=d4[[.event.name]],
-                                                     cluster=d4[[.cluster.name]], data=d4) }
-    if (i == "log-t") { d4$estim = log( d4[[.time.name]] ) }
+    cat( "\nAbout to do frailty NA")
+    
+    if (i == "frailty") { d4$estim = calc_NA(.time.name=.time.name,
+                                           .event.name=.event.name, 
+                                           .cluster.name="id",
+                                           .type="frailty",
+                                          .data=d4) }
+    cat( "\nDid frailty NA")
+    
+    if (i == "log-t") d4$estim = log( d4[[.time.name]] )
     
     # LOG
     cat( "\nFinished making estimator")
@@ -73,14 +117,22 @@ do_one_dataset = function(.d, .miss.matrix, .time.name, .event.name, .cluster.na
     # LOG
     cat( "\nFinished imputing")
     
-    print( head(imp$data) )
+    #print( head(imp$data) )
     
     ##### Fit Cox Frailty Model ####
     .coxme_formula <- paste0("Surv(t0, t, d) ~ ",
-                             paste0(.cox.predictors, collapse = " + "), " + (1|id) ")    
+                             paste0(.cox.predictors, collapse = " + "), " + (1|id) ")   
     rs1 = with( imp, coxme( as.formula(.coxme_formula) ) )
+    
+    print(rs1)
+    
     rs2 = pool(rs1)
+    
+    print(rs2)
+
     coefs = pooled_coxme_coefs(.coxme_object=rs2)
+    coefs$source.file = .source.file.name
+    coefs$method = i
     
     # LOG
     cat( "\nFinished fitting Cox model")
@@ -99,12 +151,26 @@ do_one_dataset = function(.d, .miss.matrix, .time.name, .event.name, .cluster.na
 ################################# MAKE NELSON-AALEN ESTIMATORS #################################
 
 # create naive (unclustered) Nelson-Aalen estimator (naive; ignoring study clustering)
+# or frailty NA estimator
 # this function is modified from SAS & R blog (http://sas-and-r.blogspot.com/2010/05/example-739-nelson-aalen-estimate-of.html?utm_source=feedburner&utm_medium=feed&utm_campaign=Feed%3A+SASandR+%28SAS+and+R%29)
-calc_NA_naive = function(time, event, data) {
+
+calc_NA = function(.time.name, .event.name, .type, .cluster.name=NA, .data) {
   
-  na.fit = survfit( coxph( Surv(time, event) ~ 1 ), type="aalen" )
+  # Cox formula
+  if (.type=="naive") RHS = "1"
+  if (.type=="frailty") RHS = paste( "(1|", .cluster.name, ")" )
+  form = paste("Surv(", .time.name, ",", .event.name, ") ~", RHS, sep="")
+  #form = paste("Surv(time, event) ~", RHS)
+  
+  # get NA estimate from coxph
+  #na.fit = survfit( coxph( Surv(time, event) ~ 1 ), type="aalen" )
+  na.fit = survfit( coxph( as.formula(form), data=.data ), type="aalen" )
+  
+  # times at which risk set changes
+  time = .data[[.time.name]]
   jumps = c( 0, na.fit$time, max(time) ) 
   
+  # cumulative survival at each jump time
   # need to be careful at the beginning and end
   surv = c(1, na.fit$surv, na.fit$surv[length(na.fit$surv)])
   
@@ -113,6 +179,8 @@ calc_NA_naive = function(time, event, data) {
   
   # create placeholder of correct length
   naest = numeric(length(time))  
+  
+  # for each time, apply the appropriate NA estimate
   for (i in 2:length(jumps)) {
     naest[which(time>=jumps[i-1] & time<=jumps[i])] = 
       neglogsurv[i-1]   # snag the appropriate value
@@ -153,33 +221,6 @@ calc_NA_strat = function(time, event, cluster, data) {
 }
 
 
-#TEST
-#fake$estim = calc_NA_strat(fake$t, fake$d, fake$id, fak)
-
-######### Frailties #####
-
-calc_NA_frailty = function(time, event, cluster, data) {
-  
-  na.fit = survfit( coxph( Surv(time, event) ~ (1|cluster) ), type="aalen" )
-  jumps = c( 0, na.fit$time, max(time) ) 
-  
-  # need to be careful at the beginning and end
-  surv = c(1, na.fit$surv, na.fit$surv[length(na.fit$surv)])
-  
-  # apply appropriate transformation
-  neglogsurv = -log(surv)   
-  
-  # create placeholder of correct length
-  naest = numeric(length(time))  
-  for (i in 2:length(jumps)) {
-    naest[which(time>=jumps[i-1] & time<=jumps[i])] = 
-      neglogsurv[i-1]   # snag the appropriate value
-  }
-  return(naest)
-}
-
-
-
 ################################# FUNCTION: IMPUTE #################################
 
 # data: raw dataset
@@ -187,29 +228,18 @@ calc_NA_frailty = function(time, event, cluster, data) {
 
 impute = function( .data, .method, .cluster.name, .na.name, .dont.impute.with ) {
   
-  cat("\nEntered impute function")
+  #cat("\nEntered impute function")
   
   # remove the variables that aren't needed for imputation
   # except keep the ones we need for modeling
   keep.in.data = c( names(.data)[!names(.data) %in% .dont.impute.with], "t", "t0" )
   .data = .data[ , names(.data) %in% keep.in.data ]
   
+  cat("\nVariables in imputation data (not all used for imputation):")
   print(names(.data))
   
   # if using 2l.norm, put in the required constant term
   if (.method == "2l.norm") .data$const=1
-  
-  # TEST ONLY
-  # impute an easy dataset - this works
-  #cat(mice(nhanes))
-  #cat("\nImputed nhanes data")
-  # TRY JUST A TINY DATASET WITH PMM
-  #print( head(.data) )  # looks fine
-  #.data = .data[ , !names(.data) %in% .dont.impute.with ]
-
-  #imp = mice(.data)
-  #print( head(imp$imp) )
-  #cat("\nImputed small dataset")
   
   # first fit normal MICE to get predictor matrix
   ini = mice(.data, maxit = 0)
@@ -238,7 +268,7 @@ impute = function( .data, .method, .cluster.name, .na.name, .dont.impute.with ) 
   }
   
   #LOG
-  cat(pred)
+  #cat(pred)
   
   # change method based on user specification
   method = ini$method; method[method == "pmm"] = .method
@@ -247,7 +277,7 @@ impute = function( .data, .method, .cluster.name, .na.name, .dont.impute.with ) 
   #.data[[.cluster]] = as.integer(d$trial2)
   
   #LOG
-  cat("\nAbout to impute")
+  #cat("\nAbout to impute")
   
   # impute with specified method
   imp = mice(.data, maxit = 0, pred = pred, method = method)
@@ -261,7 +291,7 @@ impute = function( .data, .method, .cluster.name, .na.name, .dont.impute.with ) 
 pooled_coxme_coefs = function(.coxme_object) {
   s = summary(.coxme_object)
   coefs = data.frame( t( s[,c("est", "se", "lo 95", "hi 95")] ) )
-  coefs$var = row.names(s)
+  #coefs$var = row.names(s)
   return(coefs)
 }
 
