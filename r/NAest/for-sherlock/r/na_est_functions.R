@@ -24,63 +24,56 @@ library(coxme)
 
 
 ############################## LOCAL TEST ##############################
-
-write.path="~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test"
-file.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test/SURV_2015-02-01_job_10_dataset_1.csv"
-miss.matrix.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test/missing_var_parameters_matrix.csv"
-file.name="fake_file_name_2_@.csv"
-
-# my impose missingness code
-#source("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/IMPMISS/Code/impose_missingness_functions.R")
-
-d = read.csv(file.path)
-d = d[1:2000,]  # small one just for debugging
-miss.matrix = read.csv(miss.matrix.path)
-
-name.prefix = "dataset_2"
-
-
-time.name="t"
-event.name="d"
-cluster.name="id"
-cox.predictors = c("ind_cd4_50_100", "ind_cd4_350_500", "ind_cd4_200_350", "ind_cd4_100_200", "d_dida")
-na.methods = c("naive", "frailty", "log-t")
-
-# RUN BY MANISHA!
-dont.impute.with = c("X", "bmi", "bmi_slope", "cd4", "cd4_slope", "log_vln_slope",
-                     "ldl_slope", "hdl_slope", "log_vln_5", "log_vln_4",
-                     "log_vln_3", "log_vln_2", "cd4_cuts", "racecatexp",
-                     "linpred", "frailty", "xB", "t", "t0", "proportion_censored",
-                     "source_file", "vln_cat", "bmi_cuts", "log_vln",
-                     
-                     "ind_bmi_gt_30", "ind_bmi_25_30", "ind_bmi_lt_20"                  
-                      )
-
-make.miss.if.contains="cd4"
-
-
-
-do_one_dataset(.d=d, .source.file.name=file.name, .miss.matrix=miss.matrix, .time.name=time.name,
-               .event.name=event.name, .cluster.name=cluster.name,
-               .cox.predictors=cox.predictors, .name.prefix=name.prefix,
-               .na.methods=na.methods, .write.path=write.path,
-               .dont.impute.with = dont.impute.with,
-               .make.miss.if.contains=make.miss.if.contains
-              )
-
-
-stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test",
-              "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test",
-              .name.prefix="results",
-              .stitch.file.name="stitched.csv"
-              )
-
+# 
+# write.path="~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test"
+# file.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test/SURV_2015-02-01_job_10_dataset_1.csv"
+# miss.matrix.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test/missing_var_parameters_matrix.csv"
+# file.name="fake_file_name_2_@.csv"
+# 
+# # my impose missingness code
+# #source("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/IMPMISS/Code/impose_missingness_functions.R")
+# 
+# d = read.csv(file.path)
+# d = d[1:2000,]  # small one just for debugging
+# miss.matrix = read.csv(miss.matrix.path)
+# 
+# name.prefix = "dataset_2"
+# 
+# 
+# time.name="t"
+# event.name="d"
+# cluster.name="id"
+# cox.predictors = c("ind_cd4_50_100", "ind_cd4_350_500", "ind_cd4_200_350", "ind_cd4_100_200", "d_dida")
+# na.methods = c("naive", "frailty", "log-t")
+# 
+# # RUN BY MANISHA!
+# impute.with = c("id", "d", cox.predictors)
+# 
+# make.miss.if.contains="cd4"
+# 
+# 
+# 
+# do_one_dataset(.d=d, .source.file.name=file.name, .miss.matrix=miss.matrix, .time.name=time.name,
+#                .event.name=event.name, .cluster.name=cluster.name,
+#                .cox.predictors=cox.predictors, .name.prefix=name.prefix,
+#                .na.methods=na.methods, .write.path=write.path,
+#                .impute.with = impute.with,
+#                .make.miss.if.contains=make.miss.if.contains
+#               )
+# 
+# 
+# stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test",
+#               "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test",
+#               .name.prefix="results",
+#               .stitch.file.name="stitched.csv"
+#               )
+# 
 
 ############################## FUNCTION: DO ONE DATASET ##############################
 
 do_one_dataset = function(.d, .source.file.name, .miss.matrix, .time.name, .event.name, .cluster.name,
                           .cox.predictors, .name.prefix, .na.methods, .write.path,
-                          .dont.impute.with, .make.miss.if.contains=NULL) {
+                          .impute.with, .make.miss.if.contains=NULL) {
 
   ##### Impose Missingness (MAR) ####
   d2 = make_missing_indics(data=.d, miss.matrix=.miss.matrix)
@@ -110,9 +103,8 @@ do_one_dataset = function(.d, .source.file.name, .miss.matrix, .time.name, .even
     # LOG
     cat( "\nFinished making estimator")
     
-    
     ##### Impute Using NA Estimator ####
-    imp = impute(.data=d4, .method="2l.norm", .cluster.name="id", .na.name="estim", .dont.impute.with)
+    imp = impute(.data=d4, .method="2l.norm", .cluster.name="id", .na.name="estim", .impute.with)
     
     # LOG
     cat( "\nFinished imputing")
@@ -133,10 +125,12 @@ do_one_dataset = function(.d, .source.file.name, .miss.matrix, .time.name, .even
     coefs = pooled_coxme_coefs(.coxme_object=rs2)
     coefs$source.file = .source.file.name
     coefs$method = i
+    # SPECIFIC TO THIS SIM: PROPORTION OF MISSING VALUES
+    coefs$prop.missing = sum(is.na(d4$ind_cd4_50_100)) / length(d4$ind_cd4_50_100)
     
     # LOG
     cat( "\nFinished fitting Cox model")
-    
+
     # write single-line file of results
     setwd(.write.path)
     write.csv( coefs, paste(Sys.Date(), .name.prefix, "NA", i, "results.csv", sep="_") ) 
@@ -191,34 +185,34 @@ calc_NA = function(.time.name, .event.name, .type, .cluster.name=NA, .data) {
 
 # create stratified Nelson-Aalen estimator (computed separately within each study)
 # this function is modified from SAS & R blog (http://sas-and-r.blogspot.com/2010/05/example-739-nelson-aalen-estimate-of.html?utm_source=feedburner&utm_medium=feed&utm_campaign=Feed%3A+SASandR+%28SAS+and+R%29)
-calc_NA_strat = function(time, event, cluster, data) {
-
-  final.na.est = c()
-  
-  for ( j in unique(cluster) ) {
-    temp = data[cluster==j, ]  # subsets with only the desired cluster
-    time.temp = time[cluster==j]
-    event.temp = event[cluster==j]
-    
-    na.fit = survfit( coxph( Surv(time.temp, event.temp) ~ 1 ), type="aalen" )
-    
-    jumps = c( 0, na.fit$time, max(time.temp) ) 
-    # need to be careful at the beginning and end
-    surv = c(1, na.fit$surv, na.fit$surv[length(na.fit$surv)])
-    
-    # apply appropriate transformation
-    neglogsurv = -log(surv)   
-    
-    # create placeholder of correct length
-    naest = numeric(length(time.temp))  
-    for (i in 2:length(jumps)) {
-      naest[ which(time.temp>=jumps[i-1] & time.temp<=jumps[i]) ] = 
-        neglogsurv[i-1]   # snag the appropriate value
-    }
-    final.na.est[cluster==j] = naest
-  }
-  return(final.na.est)
-}
+# calc_NA_strat = function(time, event, cluster, data) {
+# 
+#   final.na.est = c()
+#   
+#   for ( j in unique(cluster) ) {
+#     temp = data[cluster==j, ]  # subsets with only the desired cluster
+#     time.temp = time[cluster==j]
+#     event.temp = event[cluster==j]
+#     
+#     na.fit = survfit( coxph( Surv(time.temp, event.temp) ~ 1 ), type="aalen" )
+#     
+#     jumps = c( 0, na.fit$time, max(time.temp) ) 
+#     # need to be careful at the beginning and end
+#     surv = c(1, na.fit$surv, na.fit$surv[length(na.fit$surv)])
+#     
+#     # apply appropriate transformation
+#     neglogsurv = -log(surv)   
+#     
+#     # create placeholder of correct length
+#     naest = numeric(length(time.temp))  
+#     for (i in 2:length(jumps)) {
+#       naest[ which(time.temp>=jumps[i-1] & time.temp<=jumps[i]) ] = 
+#         neglogsurv[i-1]   # snag the appropriate value
+#     }
+#     final.na.est[cluster==j] = naest
+#   }
+#   return(final.na.est)
+# }
 
 
 ################################# FUNCTION: IMPUTE #################################
@@ -226,13 +220,13 @@ calc_NA_strat = function(time, event, cluster, data) {
 # data: raw dataset
 # method: "2l.norm.me" for Resche-Rigon's MICE-RE, "2l.norm" for MICE's native 2l.norm, or "pmm" for MICE default (primary analysis)
 
-impute = function( .data, .method, .cluster.name, .na.name, .dont.impute.with ) {
+impute = function( .data, .method, .cluster.name, .na.name, .impute.with ) {
   
   #cat("\nEntered impute function")
-  
+
   # remove the variables that aren't needed for imputation
   # except keep the ones we need for modeling
-  keep.in.data = c( names(.data)[!names(.data) %in% .dont.impute.with], "t", "t0" )
+  keep.in.data = c( .impute.with, "t", "t0", "d", "estim" )
   .data = .data[ , names(.data) %in% keep.in.data ]
   
   cat("\nVariables in imputation data (not all used for imputation):")
@@ -249,6 +243,7 @@ impute = function( .data, .method, .cluster.name, .na.name, .dont.impute.with ) 
   # (most are already removed except for those needed for Cox model)
   # NEEDS TO ALSO BE t
   pred[, "t0"] = 0
+  pred[, "t"] = 0
   
   #LOG
   cat("\nEntered impute function; finished dry run")

@@ -19,30 +19,28 @@ na.methods = c("naive", "frailty", "log-t")
 write.path = "/share/PI/manishad/naEst/output"
 miss.matrix = read.csv("/share/PI/manishad/naEst/missing_var_parameters_matrix.csv")
 
-# RUN BY MANISHA!
-dont.impute.with = c("X", "bmi", "bmi_slope", "cd4", "cd4_slope", "log_vln_slope",
-                     "ldl_slope", "hdl_slope", "log_vln_5", "log_vln_4",
-                     "log_vln_3", "log_vln_2", "cd4_cuts", "racecatexp",
-                     "linpred", "frailty", "xB", "t", "t0", "proportion_censored",
-                     "source_file", "vln_cat", "bmi_cuts", "log_vln",
-                     
-                    "ind_bmi_gt_30", 
-                     
-                     "ind_bmi_25_30", "ind_bmi_lt_20"
-                     )
-
-
 # code
 source("/share/PI/manishad/naEst/r/na_est_functions.R")
 source("/share/PI/manishad/naEst/r/impose_missingness_functions.R")
 
 # read in complete dataset
 d = read.csv(data.path)
+file.name = substring(data.path, 54)  # start at 54th character to erase annoying beginning of path
 
-do_one_dataset(.d=d, .miss.matrix=miss.matrix, .time.name=time.name,
-                          .event.name=event.name, .cluster.name=cluster.name,
-                          .cox.predictors=cox.predictors, .name.prefix=name.prefix,
-                          .na.methods=na.methods, .write.path=write.path,
-                          .dont.impute.with = dont.impute.with
-               )
+# RUN BY MANISHA!
+# don't impute with anything that's not in the Cox model
+impute.with = c("id", "d", cox.predictors)
+
+make.miss.if.contains="cd4"
+
+do_one_dataset(.d=d, .source.file.name=file.name, .miss.matrix=miss.matrix, .time.name=time.name,
+               .event.name=event.name, .cluster.name=cluster.name,
+               .cox.predictors=cox.predictors, .name.prefix=name.prefix,
+               .na.methods=na.methods, .write.path=write.path,
+               .impute.with = impute.with,
+               .make.miss.if.contains=make.miss.if.contains
+)
+
+
+
   
