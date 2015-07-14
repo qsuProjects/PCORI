@@ -177,7 +177,7 @@ generateSbatch <- function(sbatch_params, runfile_path = NA, run_now = F) {
 
 # vector of dataset paths and names
 data.wd = "/scratch/PI/manishad/PCORI/genSurv/output/covariates"
-data.paths = paste(data.wd, list.files(data.wd)[1:5], sep="/")  # ONLY DOES FIRST 5 FILES FOR NOW!
+data.paths = paste(data.wd, list.files(data.wd)[1:100], sep="/")  # do only first 100 files
 
 n.files = length(data.paths)
 
@@ -215,6 +215,6 @@ generateSbatch(sbatch_params, runfile_path)
 # works
 setwd( paste(dir.path, "/sbatch", sep="") )
 for (i in 1:n.files) {
-  system( paste("sbatch ", i, ".sbatch -p manishad", sep="") )
+  system( paste("sbatch ", i, ".sbatch", sep="") )
 }
 

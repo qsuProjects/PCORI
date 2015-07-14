@@ -49,8 +49,35 @@ stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test",
 
 
 # SHERLOCK VERSION
+
 stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/unstitched",
               "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/stitched",
                     .name.prefix="NA_frailty",
               .stitch.file.name="NA_frailty_stitched.csv"
               )
+
+stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/unstitched",
+              "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/stitched",
+              .name.prefix="NA_naive",
+              .stitch.file.name="NA_naive_stitched.csv"
+)
+
+stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/unstitched",
+              "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/stitched",
+              .name.prefix="NA_log-t",
+              .stitch.file.name="NA_log-t_stitched.csv"
+)
+
+stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/unstitched",
+              "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/stitched",
+              .name.prefix="complete.case",
+              .stitch.file.name="CC_stitched.csv"
+)
+
+
+
+
+
+
+
+

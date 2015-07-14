@@ -24,7 +24,7 @@ library(coxme)
 
 
 ############################## LOCAL TEST ##############################
-# 
+
 # write.path="~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test"
 # file.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test/SURV_2015-02-01_job_10_dataset_1.csv"
 # miss.matrix.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test/missing_var_parameters_matrix.csv"
@@ -44,7 +44,7 @@ library(coxme)
 # event.name="d"
 # cluster.name="id"
 # cox.predictors = c("ind_cd4_50_100", "ind_cd4_350_500", "ind_cd4_200_350", "ind_cd4_100_200", "d_dida")
-# na.methods = c("naive", "frailty", "log-t")
+# na.methods = c("complete.case", "naive", "frailty", "log-t")
 # 
 # # RUN BY MANISHA!
 # impute.with = c("id", "d", cox.predictors)
@@ -61,7 +61,7 @@ library(coxme)
 #                .make.miss.if.contains=make.miss.if.contains
 #               )
 # 
-# 
+
 # stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test",
 #               "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test",
 #               .name.prefix="results",
@@ -88,43 +88,41 @@ do_one_dataset = function(.d, .source.file.name, .miss.matrix, .time.name, .even
                                           .data=d4) }
     if (i == "strat") { d4$estim = calc_NA_strat(time=d4[[.time.name]],
                                                  event=d4[[.event.name]], cluster=d4[[.cluster.name]], data=d4) }
-    
-    cat( "\nAbout to do frailty NA")
+ 
     
     if (i == "frailty") { d4$estim = calc_NA(.time.name=.time.name,
                                            .event.name=.event.name, 
                                            .cluster.name="id",
                                            .type="frailty",
                                           .data=d4) }
-    cat( "\nDid frailty NA")
-    
+
     if (i == "log-t") d4$estim = log( d4[[.time.name]] )
     
     # LOG
     cat( "\nFinished making estimator")
     
     ##### Impute Using NA Estimator ####
-    imp = impute(.data=d4, .method="2l.norm", .cluster.name="id", .na.name="estim", .impute.with)
-    
-    # LOG
-    cat( "\nFinished imputing")
-    
-    #print( head(imp$data) )
-    
+    if (i != "complete.case") {
+      imp = impute(.data=d4, .method="2l.norm", .cluster.name="id", .na.name="estim", .impute.with)
+      cat( "\nFinished imputing")
+    }
+ 
     ##### Fit Cox Frailty Model ####
     .coxme_formula <- paste0("Surv(t0, t, d) ~ ",
                              paste0(.cox.predictors, collapse = " + "), " + (1|id) ")   
-    rs1 = with( imp, coxme( as.formula(.coxme_formula) ) )
     
-    print(rs1)
+    if (i == "complete.case") {
+      rs1 = coxme( as.formula(.coxme_formula), data=d3 )
+      coefs = coxme_coefs(.coxme_object=rs1)
+    } else {
+      rs1 = with( imp, coxme( as.formula(.coxme_formula) ) )
+      rs2 = pool(rs1); print(rs2)
+      coefs = pooled_coxme_coefs(.coxme_object=rs2)
+    }
     
-    rs2 = pool(rs1)
-    
-    print(rs2)
-
-    coefs = pooled_coxme_coefs(.coxme_object=rs2)
     coefs$source.file = .source.file.name
     coefs$method = i
+    
     # SPECIFIC TO THIS SIM: PROPORTION OF MISSING VALUES
     coefs$prop.missing = sum(is.na(d4$ind_cd4_50_100)) / length(d4$ind_cd4_50_100)
     
@@ -291,4 +289,26 @@ pooled_coxme_coefs = function(.coxme_object) {
 }
 
 
+# modified from Kris' function
+coxme_coefs <- function (.coxme_object) 
+{
+  .tmp <- ""
+  .beta <- .coxme_object$coefficients
+  .nvar <- length(.beta)
+  .nfrail <- nrow(.coxme_object$var) - .nvar
+  .omit <- .coxme_object$na.action
+  if (.nvar > 0) {
+    .se <- sqrt(bdsmatrix::diag(.coxme_object$var)[.nfrail + 1:.nvar])
+    .tmp <- cbind(.beta, 
+                  .se, 
+                  .beta + qnorm(.025)*.se,
+                  .beta + qnorm(.975)*.se)
+    dimnames(.tmp) <- list(names(.beta), c("est", 
+                                           "se", 
+                                           "lo 95",
+                                           "hi 95"))
+  }
+  coefs = data.frame( t( .tmp ) )
+  return(coefs)
+}
 

@@ -15,7 +15,7 @@ time.name="t"
 event.name="d"
 cluster.name="id"
 cox.predictors = c("ind_cd4_50_100", "ind_cd4_350_500", "ind_cd4_200_350", "ind_cd4_100_200", "d_dida")
-na.methods = c("naive", "frailty", "log-t")
+na.methods = c("complete.case", "naive", "frailty", "log-t")
 write.path = "/share/PI/manishad/naEst/output"
 miss.matrix = read.csv("/share/PI/manishad/naEst/missing_var_parameters_matrix.csv")
 
