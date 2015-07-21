@@ -24,18 +24,22 @@ library(coxme)
 
 
 ############################## LOCAL TEST ##############################
-
+# 
 # write.path="~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test"
 # file.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test/SURV_2015-02-01_job_10_dataset_1.csv"
-# miss.matrix.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test/missing_var_parameters_matrix.csv"
+# miss.matrix.hi.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test/missing_var_parameters_matrix_high_cd4.csv"
+# miss.matrix.lo.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test/missing_var_parameters_matrix_low_cd4.csv"
+# aux.matrix.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test/aux_var_parameters_matrix.csv"
 # file.name="fake_file_name_2_@.csv"
 # 
 # # my impose missingness code
 # #source("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/IMPMISS/Code/impose_missingness_functions.R")
 # 
 # d = read.csv(file.path)
-# d = d[1:2000,]  # small one just for debugging
-# miss.matrix = read.csv(miss.matrix.path)
+# #d = d[1:2000,]  # small one just for debugging
+# ( miss.matrix.hi = read.csv(miss.matrix.hi.path) )
+# ( miss.matrix.lo = read.csv(miss.matrix.lo.path) )
+# ( aux.matrix = read.csv(aux.matrix.path) )
 # 
 # name.prefix = "dataset_2"
 # 
@@ -43,17 +47,19 @@ library(coxme)
 # time.name="t"
 # event.name="d"
 # cluster.name="id"
-# cox.predictors = c("ind_cd4_50_100", "ind_cd4_350_500", "ind_cd4_200_350", "ind_cd4_100_200", "d_dida")
+# cox.predictors = c("ind_cd4_50_100", "ind_cd4_350_500", "ind_cd4_200_350", "ind_cd4_100_200", "d_teno")
 # na.methods = c("complete.case", "naive", "frailty", "log-t")
 # 
-# # RUN BY MANISHA!
-# impute.with = c("id", "d", cox.predictors)
+# impute.with = c("id", "d", "aux.cd4", cox.predictors)
 # 
 # make.miss.if.contains="cd4"
 # 
 # 
-# 
-# do_one_dataset(.d=d, .source.file.name=file.name, .miss.matrix=miss.matrix, .time.name=time.name,
+# do_one_dataset(.d=d, .source.file.name=file.name,
+#                .miss.matrix.hi=miss.matrix.hi, 
+#                .miss.matrix.lo=miss.matrix.lo,
+#                .aux.matrix=aux.matrix,
+#                .time.name=time.name,
 #                .event.name=event.name, .cluster.name=cluster.name,
 #                .cox.predictors=cox.predictors, .name.prefix=name.prefix,
 #                .na.methods=na.methods, .write.path=write.path,
@@ -61,22 +67,39 @@ library(coxme)
 #                .make.miss.if.contains=make.miss.if.contains
 #               )
 # 
-
+# 
 # stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test",
 #               "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test",
 #               .name.prefix="results",
 #               .stitch.file.name="stitched.csv"
 #               )
-# 
+
 
 ############################## FUNCTION: DO ONE DATASET ##############################
 
-do_one_dataset = function(.d, .source.file.name, .miss.matrix, .time.name, .event.name, .cluster.name,
+do_one_dataset = function(.d, .source.file.name, .miss.matrix.hi, .miss.matrix.lo, .aux.matrix,
+                          .time.name, .event.name, .cluster.name,
                           .cox.predictors, .name.prefix, .na.methods, .write.path,
                           .impute.with, .make.miss.if.contains=NULL) {
+  
+  #### Fit Full Model (before imposing missingness) ####
+  
+  
 
   ##### Impose Missingness (MAR) ####
-  d2 = make_missing_indics(data=.d, miss.matrix=.miss.matrix)
+  d2 = make_aux_vars(data=.d, aux.matrix=.aux.matrix)
+  
+  # split roughly on median of CD4
+  hi = d2[d2$cd4 < 300,]
+  lo = d2[d2$cd4 >= 300,]
+  # impose missingness based on parameters for high CD4
+  hi = make_missing_indics(data=hi, miss.matrix=.miss.matrix.hi)
+  lo = make_missing_indics(data=lo, miss.matrix=.miss.matrix.lo)
+  
+  # glue together
+  d2 = rbind(hi, lo)
+  
+  # make missing based on Frankenstein dataset
   d3 = missingify(d2, make.relateds.missing=FALSE, make.miss.if.contains=.make.miss.if.contains)
   
   for (i in .na.methods) {  # do once for each NA estimator method
@@ -86,9 +109,9 @@ do_one_dataset = function(.d, .source.file.name, .miss.matrix, .time.name, .even
     if (i == "naive") { d4$estim = calc_NA(.time.name=.time.name,
                                           .event.name=.event.name, .type="naive",
                                           .data=d4) }
-    if (i == "strat") { d4$estim = calc_NA_strat(time=d4[[.time.name]],
-                                                 event=d4[[.event.name]], cluster=d4[[.cluster.name]], data=d4) }
- 
+    
+#     if (i == "strat") { d4$estim = calc_NA_strat(time=d4[[.time.name]],
+#                                                  event=d4[[.event.name]], cluster=d4[[.cluster.name]], data=d4) }
     
     if (i == "frailty") { d4$estim = calc_NA(.time.name=.time.name,
                                            .event.name=.event.name, 
@@ -152,10 +175,8 @@ calc_NA = function(.time.name, .event.name, .type, .cluster.name=NA, .data) {
   if (.type=="naive") RHS = "1"
   if (.type=="frailty") RHS = paste( "(1|", .cluster.name, ")" )
   form = paste("Surv(", .time.name, ",", .event.name, ") ~", RHS, sep="")
-  #form = paste("Surv(time, event) ~", RHS)
   
   # get NA estimate from coxph
-  #na.fit = survfit( coxph( Surv(time, event) ~ 1 ), type="aalen" )
   na.fit = survfit( coxph( as.formula(form), data=.data ), type="aalen" )
   
   # times at which risk set changes
@@ -219,9 +240,6 @@ calc_NA = function(.time.name, .event.name, .type, .cluster.name=NA, .data) {
 # method: "2l.norm.me" for Resche-Rigon's MICE-RE, "2l.norm" for MICE's native 2l.norm, or "pmm" for MICE default (primary analysis)
 
 impute = function( .data, .method, .cluster.name, .na.name, .impute.with ) {
-  
-  #cat("\nEntered impute function")
-
   # remove the variables that aren't needed for imputation
   # except keep the ones we need for modeling
   keep.in.data = c( .impute.with, "t", "t0", "d", "estim" )
@@ -239,7 +257,6 @@ impute = function( .data, .method, .cluster.name, .na.name, .impute.with ) {
   
   # don't impute with these ones
   # (most are already removed except for those needed for Cox model)
-  # NEEDS TO ALSO BE t
   pred[, "t0"] = 0
   pred[, "t"] = 0
   
@@ -248,32 +265,24 @@ impute = function( .data, .method, .cluster.name, .na.name, .impute.with ) {
   
   # if not using default PMM, modify the predictor matrix to specify multilevel model
   if (.method != "pmm") {
-    #pred[ pred==1 ] = 2  # give random effects to all variables used for prediction
-    
     # treat trial as the cluster term
-    col = pred[ , .cluster.name]; col[col==2] = -2; pred[, .cluster.name] = col
+    pred[ , .cluster.name] = -2
     
     # fixed effects for N-A estimator
-    col = pred[ , .na.name ]; col[col==2] = 1; pred[ , .na.name ] = col
+    pred[ , .na.name ] = 1
  
     # if using 2l.norm, code constant as random effect
     if (.method=="2l.norm") pred[ , "const" ] = 2
   }
   
-  #LOG
-  #cat(pred)
-  
   # change method based on user specification
   method = ini$method; method[method == "pmm"] = .method
   
-  # convert class column to integer (required)
-  #.data[[.cluster]] = as.integer(d$trial2)
-  
-  #LOG
-  #cat("\nAbout to impute")
-  
   # impute with specified method
   imp = mice(.data, maxit = 0, pred = pred, method = method)
+  
+  #LOG
+  cat(imp$pred)
   
   return(imp)
 }

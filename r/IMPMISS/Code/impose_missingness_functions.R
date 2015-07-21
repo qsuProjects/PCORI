@@ -21,7 +21,7 @@
 
 ########################## WRAPPER FUNCTION: IMPOSE MISSINGNESS ##########################
 
-##### Arguments #####ma
+##### Arguments #####
 
 # data: original dataset
 # outcome.name: quoted name of the binary outcome variable
