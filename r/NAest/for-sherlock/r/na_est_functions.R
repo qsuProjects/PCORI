@@ -48,7 +48,7 @@ library(coxme)
 # event.name="d"
 # cluster.name="id"
 # cox.predictors = c("ind_cd4_50_100", "ind_cd4_350_500", "ind_cd4_200_350", "ind_cd4_100_200", "d_teno")
-# na.methods = c("complete.case", "naive", "frailty", "log-t")
+# na.methods = c("complete.case", "naive", "frailty", "log-t", "full")
 # 
 # impute.with = c("id", "d", "aux.cd4", cox.predictors)
 # 
@@ -81,14 +81,12 @@ do_one_dataset = function(.d, .source.file.name, .miss.matrix.hi, .miss.matrix.l
                           .time.name, .event.name, .cluster.name,
                           .cox.predictors, .name.prefix, .na.methods, .write.path,
                           .impute.with, .make.miss.if.contains=NULL) {
-  
-  #### Fit Full Model (before imposing missingness) ####
-  
-  
 
-  ##### Impose Missingness (MAR) ####
+  ##### Make Auxiliary Variable ####
+  # single variable that's highly correlated with continuous CD4
   d2 = make_aux_vars(data=.d, aux.matrix=.aux.matrix)
   
+  ##### Impose Missingness (MAR) ####
   # split roughly on median of CD4
   hi = d2[d2$cd4 < 300,]
   lo = d2[d2$cd4 >= 300,]
@@ -121,23 +119,30 @@ do_one_dataset = function(.d, .source.file.name, .miss.matrix.hi, .miss.matrix.l
 
     if (i == "log-t") d4$estim = log( d4[[.time.name]] )
     
-    # LOG
+    # log
     cat( "\nFinished making estimator")
     
     ##### Impute Using NA Estimator ####
-    if (i != "complete.case") {
+    if (!i %in% c("complete.case", "full") ) {  # unless doing a non-imputation approach
       imp = impute(.data=d4, .method="2l.norm", .cluster.name="id", .na.name="estim", .impute.with)
       cat( "\nFinished imputing")
     }
  
     ##### Fit Cox Frailty Model ####
+    # formula is same regardless of method
     .coxme_formula <- paste0("Surv(t0, t, d) ~ ",
                              paste0(.cox.predictors, collapse = " + "), " + (1|id) ")   
     
+    # different model call depending on whether we need to pool over imputations or not
     if (i == "complete.case") {
       rs1 = coxme( as.formula(.coxme_formula), data=d3 )
       coefs = coxme_coefs(.coxme_object=rs1)
-    } else {
+    }
+    else if (i == "full") {
+      rs1 = coxme( as.formula(.coxme_formula), data=d2 )  # use d2, pre-missingness, instead of d3
+      coefs = coxme_coefs(.coxme_object=rs1)
+    }
+    else {
       rs1 = with( imp, coxme( as.formula(.coxme_formula) ) )
       rs2 = pool(rs1); print(rs2)
       coefs = pooled_coxme_coefs(.coxme_object=rs2)
@@ -146,10 +151,10 @@ do_one_dataset = function(.d, .source.file.name, .miss.matrix.hi, .miss.matrix.l
     coefs$source.file = .source.file.name
     coefs$method = i
     
-    # SPECIFIC TO THIS SIM: PROPORTION OF MISSING VALUES
+    # proportion of observations (NOT subjects) with missing CD4
     coefs$prop.missing = sum(is.na(d4$ind_cd4_50_100)) / length(d4$ind_cd4_50_100)
     
-    # LOG
+    # log
     cat( "\nFinished fitting Cox model")
 
     # write single-line file of results

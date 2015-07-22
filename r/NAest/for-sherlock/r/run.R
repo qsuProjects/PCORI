@@ -15,7 +15,7 @@ time.name="t"
 event.name="d"
 cluster.name="id"
 cox.predictors = c("ind_cd4_50_100", "ind_cd4_350_500", "ind_cd4_200_350", "ind_cd4_100_200", "d_teno")
-na.methods = c("complete.case", "naive", "frailty", "log-t")
+na.methods = c("complete.case", "naive", "frailty", "log-t", "full")
 write.path = "/share/PI/manishad/naEst/output"
 miss.matrix.hi = read.csv("/share/PI/manishad/naEst/missing_var_parameters_matrix_high_cd4.csv")
 miss.matrix.lo = read.csv("/share/PI/manishad/naEst/missing_var_parameters_matrix_low_cd4.csv")
@@ -30,7 +30,7 @@ source("/share/PI/manishad/naEst/r/impose_missingness_functions.R")
 
 # read in complete dataset
 d = read.csv(data.path)
-file.name = substring(data.path, 54)  # start at 54th character to erase annoying beginning of path
+file.name = substring(data.path, 58)  # start at 58th character to erase annoying beginning of path
 
 do_one_dataset(.d=d, .source.file.name=file.name, 
                .miss.matrix.hi=miss.matrix.hi, 

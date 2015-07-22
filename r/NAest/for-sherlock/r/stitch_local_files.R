@@ -40,16 +40,15 @@ stitch_files = function(.results.singles.path, .results.stitched.write.path=.res
 #.name.prefix = "right_results" 
 #stitch_files(.results.singles.path, .results.singles.path, .name.prefix)
 
-# LOCAL TEST
-stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test",
-              "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test",
-              .name.prefix="results",
-              .stitch.file.name="stitched.csv"
-)
+# # LOCAL TEST
+# stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test",
+#               "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test",
+#               .name.prefix="results",
+#               .stitch.file.name="stitched.csv"
+# )
 
 
-# SHERLOCK VERSION
-
+# stitch files from Sherlock
 stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/unstitched",
               "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/stitched",
                     .name.prefix="NA_frailty",
@@ -74,7 +73,11 @@ stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/unstit
               .stitch.file.name="CC_stitched.csv"
 )
 
-
+stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/unstitched",
+              "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/stitched",
+              .name.prefix="full",
+              .stitch.file.name="full_stitched.csv"
+)
 
 
 
