@@ -27,9 +27,8 @@ library(coxme)
 # 
 # write.path="~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test"
 # file.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test/SURV_2015-02-01_job_10_dataset_1.csv"
-# miss.matrix.hi.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test/missing_var_parameters_matrix_high_cd4.csv"
-# miss.matrix.lo.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test/missing_var_parameters_matrix_low_cd4.csv"
-# aux.matrix.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test/aux_var_parameters_matrix.csv"
+# miss.matrix.hi.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/for-sherlock/missing_var_parameters_matrix_good_survivors.csv"
+# miss.matrix.lo.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/for-sherlock/missing_var_parameters_matrix_bad_survivors.csv"
 # file.name="fake_file_name_2_@.csv"
 # 
 # # my impose missingness code
@@ -39,20 +38,16 @@ library(coxme)
 # #d = d[1:2000,]  # small one just for debugging
 # ( miss.matrix.hi = read.csv(miss.matrix.hi.path) )
 # ( miss.matrix.lo = read.csv(miss.matrix.lo.path) )
-# ( aux.matrix = read.csv(aux.matrix.path) )
 # 
 # name.prefix = "dataset_2"
-# 
 # 
 # time.name="t"
 # event.name="d"
 # cluster.name="id"
-# cox.predictors = c("ind_cd4_50_100", "ind_cd4_350_500", "ind_cd4_200_350", "ind_cd4_100_200", "d_teno")
+# cox.predictors = c("X")
 # na.methods = c("complete.case", "naive", "frailty", "log-t", "full")
-# 
-# impute.with = c("id", "d", "aux.cd4", cox.predictors)
-# 
-# make.miss.if.contains="cd4"
+# impute.with = c("id", "d", "Z", cox.predictors)
+# make.miss.if.contains="X"
 # 
 # 
 # do_one_dataset(.d=d, .source.file.name=file.name,
@@ -82,17 +77,26 @@ do_one_dataset = function(.d, .source.file.name, .miss.matrix.hi, .miss.matrix.l
                           .cox.predictors, .name.prefix, .na.methods, .write.path,
                           .impute.with, .make.miss.if.contains=NULL) {
 
-  ##### Make Auxiliary Variable ####
-  # single variable that's highly correlated with continuous CD4
-  d2 = make_aux_vars(data=.d, aux.matrix=.aux.matrix)
-  
   ##### Impose Missingness (MAR) ####
-  # split roughly on median of CD4
-  hi = d2[d2$cd4 < 300,]
-  lo = d2[d2$cd4 >= 300,]
-  # impose missingness based on parameters for high CD4
+  # survival time by subject
+  library(data.table)
+  dt = data.table(.d)
+  dt[, surv := max(t), by=id ]  # get survival time for each subject (last observed time point)
+  d2 = data.frame(dt)
+  
+  # split roughly on median survival time
+  hi = d2[d2$surv > 42,]  # BOOKMARK: REPLACE WITH ACTUAL MEDIAN
+  lo = d2[d2$surv <= 42,]  # BOOKMARK: REPLACE WITH ACTUAL MEDIAN
+  
+  # impose missingness by survival group
   hi = make_missing_indics(data=hi, miss.matrix=.miss.matrix.hi)
   lo = make_missing_indics(data=lo, miss.matrix=.miss.matrix.lo)
+  
+  # TEST ONLY
+   #print( mean(hi$X[hi$miss.ind_X==0]) )  # mean of observed good survivors
+   #print( mean(lo$X[lo$miss.ind_X==0]) )  # mean of observed poor survivors
+  #print( mean(hi$X) )  # mean of all good survivors
+  #print( mean(lo$X) )  # mean of all poor survivors
   
   # glue together
   d2 = rbind(hi, lo)
@@ -124,7 +128,7 @@ do_one_dataset = function(.d, .source.file.name, .miss.matrix.hi, .miss.matrix.l
     
     ##### Impute Using NA Estimator ####
     if (!i %in% c("complete.case", "full") ) {  # unless doing a non-imputation approach
-      imp = impute(.data=d4, .method="2l.norm", .cluster.name="id", .na.name="estim", .impute.with)
+      imp = impute(.data=d4, .method="pmm", .cluster.name="id", .na.name="estim", .impute.with)
       cat( "\nFinished imputing")
     }
  
@@ -151,8 +155,8 @@ do_one_dataset = function(.d, .source.file.name, .miss.matrix.hi, .miss.matrix.l
     coefs$source.file = .source.file.name
     coefs$method = i
     
-    # proportion of observations (NOT subjects) with missing CD4
-    coefs$prop.missing = sum(is.na(d4$ind_cd4_50_100)) / length(d4$ind_cd4_50_100)
+    # proportion of observations (NOT subjects) with missing X
+    coefs$prop.missing = sum(is.na(d4$X)) / length(d4$X)
     
     # log
     cat( "\nFinished fitting Cox model")
@@ -297,8 +301,9 @@ impute = function( .data, .method, .cluster.name, .na.name, .impute.with ) {
 
 pooled_coxme_coefs = function(.coxme_object) {
   s = summary(.coxme_object)
-  coefs = data.frame( t( s[,c("est", "se", "lo 95", "hi 95")] ) )
-  #coefs$var = row.names(s)
+  #coefs = data.frame( t( s[,c("est", "se", "lo 95", "hi 95")] ) )
+  coefs = data.frame( s[,c("est", "se", "lo 95", "hi 95")] )
+  names(coefs) = row.names(s)  # use actual variable names
   return(coefs)
 }
 

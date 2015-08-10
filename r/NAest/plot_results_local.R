@@ -4,8 +4,6 @@
 setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/stitched")
 
 # reshape the wide-format ones
-
-
 nf = read.csv("NA_frailty_stitched.csv")
 nn = read.csv("NA_naive_stitched.csv")
 lt = read.csv("NA_log-t_stitched.csv")
@@ -35,8 +33,9 @@ lt.w = reshape(lt, varying=c("est", "se", "lo.95", "hi.95"),
 cc = read.csv("CC_stitched.csv"); cc = cc[,-1]
 f = read.csv("full_stitched.csv"); f = f[,-1]
 
-r = rbind(nf.w, nn.w, lt.w, cc, f)
+l = rbind(nf.w, nn.w, lt.w, cc, f)
 
+names(l)[names(l)=="X"] = "value"
 
 # r = rbind( read.csv("NA_frailty_stitched.csv"), 
 #            read.csv("NA_naive_stitched.csv"),
@@ -45,14 +44,13 @@ r = rbind(nf.w, nn.w, lt.w, cc, f)
 #            read.csv("CC_stitched.csv"),
 #            read.csv("full_stitched.csv")
 #            )
-r = r[,-1]; dim(r)
 
 # how many datasets were run?
-( n = length(unique(r$source.file)) )
+( n = length(unique(l$source.file)) )
 
 # true betas
 setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest")
-b = read.csv("true_betas.csv")
+( b = read.csv("true_betas.csv") )
 
 
 library(reshape2)
@@ -65,28 +63,22 @@ library(data.table)
 
 # mean % missing in the datasets
 
-temp = r[!duplicated(r$source.file),]
+temp = l[!duplicated(l$source.file),]
 mean(temp$prop.missing)
 
 
 ########################### RESHAPE RESULTS ###########################
 
 # names of variables that should go into long form
-varying.names = names(r)[!names(r) %in% c("stat", "source.file", "method") ]
-
-# long form
-l = reshape(r, varying=varying.names, 
-            v.names="value",
-            timevar="var",
-            times = varying.names,
-            direction="long"); dim(l)
+varying.names = names(l)[!names(l) %in% c("stat", "source.file", "method") ]
 
 w = reshape(l, timevar="stat",
-            idvar=c("method", "var", "source.file"),
+            idvar=c("method", "source.file"),
             direction="wide")
 
 # remove dumb columns
-w = w[ ,!names(w) %in% c("id.est", "id.se", "id.lo 95", "id.hi 95")]
+w = w[ ,!names(w) %in% c("prop.missing.se", "prop.missing.lo.95",
+"prop.missing.hi.95", "prop.missing.lo 95", "prop.missing.hi 95")]
 names(w)[4:7] = c("est", "se", "lo.95", "hi.95")
 
 # merge in betas

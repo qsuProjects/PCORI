@@ -40,7 +40,7 @@ stitch_files = function(.results.singles.path, .results.stitched.write.path=.res
 #.name.prefix = "right_results" 
 #stitch_files(.results.singles.path, .results.singles.path, .name.prefix)
 
-# # LOCAL TEST
+# LOCAL TEST
 # stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test",
 #               "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test",
 #               .name.prefix="results",
@@ -51,35 +51,9 @@ stitch_files = function(.results.singles.path, .results.stitched.write.path=.res
 # stitch files from Sherlock
 stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/unstitched",
               "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/stitched",
-                    .name.prefix="NA_frailty",
-              .stitch.file.name="NA_frailty_stitched.csv"
+                    .name.prefix="results",
+              .stitch.file.name="stitched.csv"
               )
-
-stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/unstitched",
-              "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/stitched",
-              .name.prefix="NA_naive",
-              .stitch.file.name="NA_naive_stitched.csv"
-)
-
-stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/unstitched",
-              "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/stitched",
-              .name.prefix="NA_log-t",
-              .stitch.file.name="NA_log-t_stitched.csv"
-)
-
-stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/unstitched",
-              "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/stitched",
-              .name.prefix="complete.case",
-              .stitch.file.name="CC_stitched.csv"
-)
-
-stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/unstitched",
-              "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/stitched",
-              .name.prefix="full",
-              .stitch.file.name="full_stitched.csv"
-)
-
-
 
 
 

@@ -14,14 +14,14 @@ name.prefix = args[2]
 time.name="t"
 event.name="d"
 cluster.name="id"
-cox.predictors = c("ind_cd4_50_100", "ind_cd4_350_500", "ind_cd4_200_350", "ind_cd4_100_200", "d_teno")
+cox.predictors = c("X")
 na.methods = c("complete.case", "naive", "frailty", "log-t", "full")
 write.path = "/share/PI/manishad/naEst/output"
-miss.matrix.hi = read.csv("/share/PI/manishad/naEst/missing_var_parameters_matrix_high_cd4.csv")
-miss.matrix.lo = read.csv("/share/PI/manishad/naEst/missing_var_parameters_matrix_low_cd4.csv")
-aux.matrix = read.csv("/share/PI/manishad/naEst/aux_var_parameters_matrix.csv")
-impute.with = c("id", "d", "aux.cd4", cox.predictors)
-make.miss.if.contains="cd4"
+miss.matrix.hi = read.csv("/share/PI/manishad/naEst/missing_var_parameters_matrix_good_survivors.csv")
+miss.matrix.lo = read.csv("/share/PI/manishad/naEst/missing_var_parameters_matrix_bad_survivors.csv")
+aux.matrix = read.csv("/share/PI/manishad/naEst/aux_var_parameters_matrix_Z.csv")
+impute.with = c("id", "d", "Z", cox.predictors)
+make.miss.if.contains="X"
 
 
 # code
