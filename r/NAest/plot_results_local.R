@@ -3,47 +3,8 @@
 
 setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/stitched")
 
-# reshape the wide-format ones
-nf = read.csv("NA_frailty_stitched.csv")
-nn = read.csv("NA_naive_stitched.csv")
-lt = read.csv("NA_log-t_stitched.csv")
-
-
-nf.w = reshape(nf, varying=c("est", "se", "lo.95", "hi.95"), 
-               v.names="X",
-               times = c("est", "se", "lo.95", "hi.95"),
-               timevar="stat",
-               idvar="source.file",
-               direction="long"); dim(nf.w)
-
-nn.w = reshape(nn, varying=c("est", "se", "lo.95", "hi.95"), 
-               v.names="X",
-               times = c("est", "se", "lo.95", "hi.95"),
-               timevar="stat",
-               idvar="source.file",
-               direction="long"); dim(nf.w)
-
-lt.w = reshape(lt, varying=c("est", "se", "lo.95", "hi.95"), 
-               v.names="X",
-               times = c("est", "se", "lo.95", "hi.95"),
-               timevar="stat",
-               idvar="source.file",
-               direction="long"); dim(nf.w)
-
-cc = read.csv("CC_stitched.csv"); cc = cc[,-1]
-f = read.csv("full_stitched.csv"); f = f[,-1]
-
-l = rbind(nf.w, nn.w, lt.w, cc, f)
-
-names(l)[names(l)=="X"] = "value"
-
-# r = rbind( read.csv("NA_frailty_stitched.csv"), 
-#            read.csv("NA_naive_stitched.csv"),
-#            read.csv("NA_log-t_stitched.csv"),
-#            
-#            read.csv("CC_stitched.csv"),
-#            read.csv("full_stitched.csv")
-#            )
+l = read.csv("stitched.csv")
+l= l[,-1]; dim(l)  # should be 2000 (4 lines * 5 methods * 100 datasets)
 
 # how many datasets were run?
 ( n = length(unique(l$source.file)) )
@@ -69,7 +30,7 @@ mean(temp$prop.missing)
 
 ########################### RESHAPE RESULTS ###########################
 
-# names of variables that should go into long form
+# names of variables that should go into wide form
 varying.names = names(l)[!names(l) %in% c("stat", "source.file", "method") ]
 
 w = reshape(l, timevar="stat",
@@ -79,7 +40,7 @@ w = reshape(l, timevar="stat",
 # remove dumb columns
 w = w[ ,!names(w) %in% c("prop.missing.se", "prop.missing.lo.95",
 "prop.missing.hi.95", "prop.missing.lo 95", "prop.missing.hi 95")]
-names(w)[4:7] = c("est", "se", "lo.95", "hi.95")
+names(w)[c(3,5:7)] = c("est", "se", "lo.95", "hi.95")
 
 # merge in betas
 w = merge(w, b)
@@ -169,6 +130,6 @@ p[[4]] =ggplot(m2, aes(x=var, y=cov.mean, color=method) ) + geom_point(size=poin
 
 setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/results")
 library(gridExtra)
-ggsave( paste(Sys.Date(), "cd4_and_teno_results.pdf", sep="_"),
+ggsave( paste(Sys.Date(), "simple_cov_results.pdf", sep="_"),
         do.call("marrangeGrob", c(p,nrow=1,ncol=1) ), width=9, height=9 )
 
