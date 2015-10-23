@@ -23,7 +23,6 @@ rm /share/PI/manishad/naEst/output/*
 rm /share/PI/manishad/naEst/sbatch/slurm*
 rm /share/PI/manishad/naEst/slurm*
  
-  
 rm /share/PI/manishad/naEst/na00*
   
 # remove unstitched and stitched local files

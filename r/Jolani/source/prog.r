@@ -6,8 +6,9 @@ require(mice)
 require(MASS)
 
 # loading setup values
-load("script/binary/setup.RData")
-source("script/binary/subfunctions.r")
+setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/Jolani/source")
+load("setup.RData")
+source("subfunctions.r")
 
 rep <- 500
 seed <- 2781903

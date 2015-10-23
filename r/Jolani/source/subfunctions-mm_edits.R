@@ -89,6 +89,17 @@ mice.impute.2l.bin <- function(y, ry, x,type){
   randmodel <- paste("yobs ~ ", paste(fixe[-1], collapse="+"), "+ ( 1 +", 
                      paste(rande[-1],collapse="+"), "|", clust, ")") # [-1] to remove intercept
   
+  
+  ################
+  # MM added to catch case with only random intercept
+  if (length(rande) < 2) {
+    randmodel <- paste("yobs ~ ", paste(fixe[-1], collapse="+"),
+              "+ ( 1 ", paste(rande[-1],collapse="+"), "|", clust, ")") # [-1] to remove intercept
+  } 
+  print(randmodel)
+  ################
+  
+  
   suppressWarnings(fit <- try(glmer(formula(randmodel), data = data.frame(yobs,xobs), 
                                     family = binomial),silent=T))
   if(!is.null(attr(fit,"class"))){

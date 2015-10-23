@@ -11,16 +11,18 @@ name.prefix = args[2]
 
 ############################## SET LESS COMMON ARGUMENTS ##############################
 
+write.path = "/share/PI/manishad/naEst/output"
+
+miss.matrix.hi = read.csv("/share/PI/manishad/naEst/missing_var_parameters_matrix_high_Y.csv")
+miss.matrix.lo = read.csv("/share/PI/manishad/naEst/missing_var_parameters_matrix_low_Y.csv")
+aux.matrix = read.csv("/share/PI/manishad/naEst/aux_var_parameters_matrix_Z.csv")
 time.name="t"
 event.name="d"
 cluster.name="id"
 cox.predictors = c("X")
-na.methods = c("complete.case", "naive", "frailty", "log-t", "full")
-write.path = "/share/PI/manishad/naEst/output"
-miss.matrix.hi = read.csv("/share/PI/manishad/naEst/missing_var_parameters_matrix_good_survivors.csv")
-miss.matrix.lo = read.csv("/share/PI/manishad/naEst/missing_var_parameters_matrix_bad_survivors.csv")
-aux.matrix = read.csv("/share/PI/manishad/naEst/aux_var_parameters_matrix_Z.csv")
-impute.with = c("id", "d", "Z", cox.predictors)
+na.methods = c("complete.case", "complete.case.by.subj",
+               "naive", "frailty", "log-t", "full")  # misnomer because some of these don't involve an NA estimator (e.g., CC)
+impute.with = c("id", "event", "time.X", "time.Z", "Z", cox.predictors)
 make.miss.if.contains="X"
 
 
@@ -41,7 +43,8 @@ do_one_dataset(.d=d, .source.file.name=file.name,
                .cox.predictors=cox.predictors, .name.prefix=name.prefix,
                .na.methods=na.methods, .write.path=write.path,
                .impute.with = impute.with,
-               .make.miss.if.contains=make.miss.if.contains
+               .make.miss.if.contains=make.miss.if.contains,
+               .p.censor = 0.2
 )
 
 

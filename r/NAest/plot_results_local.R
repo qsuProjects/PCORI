@@ -4,7 +4,7 @@
 setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/from-sherlock/stitched")
 
 l = read.csv("stitched.csv")
-l= l[,-1]; dim(l)  # should be 2000 (4 lines * 5 methods * 100 datasets)
+l= l[,-1]; dim(l)  # should be 2400 (4 lines * 6 methods * 100 datasets)
 
 # how many datasets were run?
 ( n = length(unique(l$source.file)) )
@@ -50,26 +50,39 @@ w$std.bias = (w$bias/w$se) * 100
 
 ########################### MAKE DATASET OF AVERAGES ###########################
 
+# compute coverage (0/1) for each sim
 w$covers = (w$beta <= w$hi.95) & (w$beta >= w$lo.95)
 
-# col for mean est, mean se, 
+# compute MSE for each sim
+w$mse = (w$se)^2 + (w$bias)^2
+
+# beta hat
 m = data.table(w)
 m[, est.mean := mean(est), by=list(method, var) ]
 m[, est.lo.95 := quantile(est, .025), by=list(method, var) ]
 m[, est.hi.95 := quantile(est, .975), by=list(method, var) ]
 
+# SE
 m[, se.mean := mean(se), by=list(method, var) ]
 m[, se.lo.95 := quantile(se, .025), by=list(method, var) ]
 m[, se.hi.95 := quantile(se, .975), by=list(method, var) ]
 
+# bias
 m[, bias.mean := mean(bias), by=list(method, var) ]
-m[, bias.lo.95 := quantile(bias, .025), by=list(method, var) ]
-m[, bias.hi.95 := quantile(bias, .975), by=list(method, var) ]
+#m[, bias.lo.95 := quantile(bias, .025), by=list(method, var) ]  # NOT USING EMPIRICAL BIAS QUANTILES
+#m[, bias.hi.95 := quantile(bias, .975), by=list(method, var) ]
 
+# std bias
 m[, std.bias.mean := mean(std.bias), by=list(method, var) ]
 m[, std.bias.lo.95 := quantile(std.bias, .025), by=list(method, var) ]
 m[, std.bias.hi.95 := quantile(std.bias, .975), by=list(method, var) ]
 
+# MSE
+m[, mse.mean := mean(mse), by=list(method, var) ]
+m[, mse.lo.95 := quantile(mse.mean, .025), by=list(method, var) ]
+m[, mse.hi.95 := quantile(mse.mean, .975), by=list(method, var) ]
+
+# coverage
 m[, cov.mean := mean(covers), by=list(method, var) ]
 m = data.frame(m)
 
@@ -108,7 +121,9 @@ p[[1]] = ggplot(m2, aes(x=var, y=std.bias.mean, color=method) ) +
 ylab="Bias (95% empirical CI)"
 p[[2]] =ggplot(m2, aes(x=var, y=bias.mean, color=method) ) + geom_point(size=point.size, position=pd) +
   theme_bw() + xlab(xlab) + ylab(ylab) +
-  geom_errorbar( aes(ymin=bias.lo.95, ymax=bias.hi.95), width=error.width, lwd=lwd, position=pd ) +
+  geom_errorbar( aes(ymin = bias.mean - qnorm(.025)*(se.mean/sqrt(n)),
+                     ymax = bias.mean + qnorm(.025)*(se.mean/sqrt(n))),
+                 width=error.width, lwd=lwd, position=pd ) +
   coord_flip() +
   geom_hline(yintercept=0, lty=2, lwd=lwd)
 
@@ -127,9 +142,15 @@ p[[4]] =ggplot(m2, aes(x=var, y=cov.mean, color=method) ) + geom_point(size=poin
   coord_flip() +
   geom_hline(yintercept=0.95, lty=2, lwd=lwd)
 
+ylab="MSE (95% empirical CI)"
+p[[5]] =ggplot(m2, aes(x=var, y=mse.mean, color=method) ) + geom_point(size=point.size, position=pd) +
+  theme_bw() + xlab(xlab) + ylab(ylab) +
+  geom_errorbar( aes(ymin=mse.lo.95, ymax=mse.hi.95), width=error.width, lwd=lwd, position=pd ) +
+  coord_flip()
 
-setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/results")
+
+setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/results/Version 4")
 library(gridExtra)
-ggsave( paste(Sys.Date(), "simple_cov_results.pdf", sep="_"),
+ggsave( paste(Sys.Date(), "simple_cov_results_version6.pdf", sep="_"),
         do.call("marrangeGrob", c(p,nrow=1,ncol=1) ), width=9, height=9 )
 
