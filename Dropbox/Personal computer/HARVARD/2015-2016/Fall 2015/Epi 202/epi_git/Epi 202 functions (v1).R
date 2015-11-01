@@ -1,4 +1,4 @@
-
+ 
 # barfs out all possible information for a person-time 2X2 table
 person_time_inf = function(a, b, N1, N0) {
   
