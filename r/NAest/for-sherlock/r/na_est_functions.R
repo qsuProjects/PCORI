@@ -42,11 +42,10 @@ miss.matrix.lo.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/for-sherlock
 file.name="fake_file_name_2_@.csv"
 
 d = read.csv(file.path)
-#d = d[1:2000,]  # small one just for debugging
 
 # create variables for log-time interactions
 d$time.X = log(d$t) * d$X
-d$time.Z = log(d$t) * d$X
+d$time.Z = log(d$t) * d$Z
 
 ( miss.matrix.hi = read.csv(miss.matrix.hi.path) )
 ( miss.matrix.lo = read.csv(miss.matrix.lo.path) )
@@ -59,8 +58,12 @@ cluster.name="id"
 cox.predictors = c("X")
 na.methods = c("complete.case", "complete.case.by.subj",
                "naive", "frailty", "log-t", "full")  # misnomer because some of these don't involve an NA estimator (e.g., CC)
-impute.with = c("id", "event", "time.X", "time.Z", "Z", cox.predictors)
-make.miss.if.contains="X"
+
+impute.with = c("id", "X", "Z", "time.X", "time.Z", "Z", cox.predictors)
+
+#~~~~~~~~~ CHANGED 12/12
+#make.miss.if.contains="X"
+make.miss.if.contains=NULL
 
 
 do_one_dataset(.d=d, .source.file.name=file.name,
@@ -72,8 +75,8 @@ do_one_dataset(.d=d, .source.file.name=file.name,
                .cox.predictors=cox.predictors, .name.prefix=name.prefix,
                .na.methods=na.methods, .write.path=write.path,
                .impute.with = impute.with,
-               .make.miss.if.contains=make.miss.if.contains,
-               .p.censor = 0.2
+               .make.miss.if.contains=make.miss.if.contains
+               #.p.censor = 0.2
               )
 
 
@@ -91,41 +94,17 @@ do_one_dataset = function(.d, .source.file.name, .miss.matrix.hi, .miss.matrix.l
                           .cox.predictors, .name.prefix, .na.methods, .write.path,
                           .impute.with, .make.miss.if.contains=NULL, .p.censor) {
 
+  ##### Overwrite Z to make it more correlated with X (r=0.86) #####
+  .d$Z = .d$X + rnorm(dim(.d)[1], mean=0, sd=.6)
+
   ##### Impose Missingness (MAR) ####
       # survival time by subject
       library(data.table)
       dt = data.table(.d)
       dt[, surv := max(t), by=id ]  # get survival time for each subject (last observed time point)
       d2 = data.frame(dt)
-    
-      # random censoring
-      #d2 = random_censor(.d=d2, .id.var.name="id", .p.censor=.p.censor)
 
-#   ##### V4: SPLIT ON Y AND MAKE MISSINGNESS CONDITIONAL ON D #####
-#   # split roughly on median survival time
-#   hi = d2[d2$surv > 74,]   # CHECK THIS
-#   lo = d2[d2$surv <= 74,] 
-#   
-#   # impose missingness by survival group
-#   hi = make_missing_indics(data=hi, miss.matrix=.miss.matrix.hi)
-#   lo = make_missing_indics(data=lo, miss.matrix=.miss.matrix.lo)
-#   
-#   # TEST ONLY
-# #   print( mean(hi$X[hi$miss.X==0]) )  # mean of observed good survivors
-# #   print( mean(lo$X[lo$miss.X==0]) )  # mean of observed poor survivors
-# #   print( mean(hi$X) )  # mean of all good survivors
-# #   print( mean(lo$X) )  # mean of all poor survivors
-# 
-#   # proportion missing X by event status...
-#   aggregate(miss.X ~ d, hi, mean)  # ...conditional on good survival
-#   aggregate(miss.X ~ d, lo, mean)  # ...conditional on poor survival
-# # for good survivors, we see you if you DID have an event
-# # for bad survivors, we see you if you DID NOT have an event
-# 
-#   
-# below is the part that was running accidentally...
-
-#   ##### V3: SPLIT ON X AND MAKE MISSINGNESS CONDITIONAL ON X #####
+  ##### V3: SPLIT ON X AND MAKE MISSINGNESS CONDITIONAL ON X #####
   # split roughly on median X
   hi = d2[d2$X > 0,] 
   lo = d2[d2$X <= 0,] 
@@ -134,7 +113,7 @@ do_one_dataset = function(.d, .source.file.name, .miss.matrix.hi, .miss.matrix.l
   hi = make_missing_indics(data=hi, miss.matrix=.miss.matrix.hi)
   lo = make_missing_indics(data=lo, miss.matrix=.miss.matrix.lo)
 
-#   # TEST ONLY
+#   JUST FOR TEST PURPOSES
 #   print( table(hi$miss.ind_X) )  # how much missingness among high X?
 #   print( table(lo$miss.ind_X) )  # and low X?
 # 
@@ -143,7 +122,6 @@ do_one_dataset = function(.d, .source.file.name, .miss.matrix.hi, .miss.matrix.l
 #   print( median(lo$surv[lo$miss.ind_X==0]) )  # mean of observed low-X
 #   print( median(lo$surv) )  # mean of all low-X
 
-  
   # glue together
   d2 = rbind(hi, lo)
   
@@ -213,7 +191,7 @@ do_one_dataset = function(.d, .source.file.name, .miss.matrix.hi, .miss.matrix.l
     coefs$method = i
     
     # proportion of observations (NOT subjects) with missing X
-    coefs$prop.missing = sum(is.na(d4$X)) / length(d4$X)
+    coefs$prop.rows.missing = sum(is.na(d4$X)) / length(d4$X)
     
     # log
     cat( "\nFinished fitting Cox model")
@@ -231,11 +209,11 @@ do_one_dataset = function(.d, .source.file.name, .miss.matrix.hi, .miss.matrix.l
 ##~~~~~~~~ BOOKMARK: CHANGE THIS. CURRENTLY P.CENSOR IS ACTUALLY P OF EVENT
 # .d = dataset
 # .p.censor = probability of censoring
-random_censor = function(.d, .id.var.name, .p.censor) {
-  dt = data.table(.d)
-  dt[, event := rbinom(n=1, size=1, prob=.p.censor), by=.id.var.name ]
-  return( as.data.frame(dt) )
-}
+# random_censor = function(.d, .id.var.name, .p.censor) {
+#   dt = data.table(.d)
+#   dt[, event := rbinom(n=1, size=1, prob=.p.censor), by=.id.var.name ]
+#   return( as.data.frame(dt) )
+# }
 
 # test
 #fake = random_censor(d, "id", 0.999)
@@ -279,97 +257,86 @@ calc_NA = function(.time.name, .event.name, .type, .cluster.name=NA, .data) {
 }
 
 
-# create stratified Nelson-Aalen estimator (computed separately within each study)
-# this function is modified from SAS & R blog (http://sas-and-r.blogspot.com/2010/05/example-739-nelson-aalen-estimate-of.html?utm_source=feedburner&utm_medium=feed&utm_campaign=Feed%3A+SASandR+%28SAS+and+R%29)
-# calc_NA_strat = function(time, event, cluster, data) {
-# 
-#   final.na.est = c()
-#   
-#   for ( j in unique(cluster) ) {
-#     temp = data[cluster==j, ]  # subsets with only the desired cluster
-#     time.temp = time[cluster==j]
-#     event.temp = event[cluster==j]
-#     
-#     na.fit = survfit( coxph( Surv(time.temp, event.temp) ~ 1 ), type="aalen" )
-#     
-#     jumps = c( 0, na.fit$time, max(time.temp) ) 
-#     # need to be careful at the beginning and end
-#     surv = c(1, na.fit$surv, na.fit$surv[length(na.fit$surv)])
-#     
-#     # apply appropriate transformation
-#     neglogsurv = -log(surv)   
-#     
-#     # create placeholder of correct length
-#     naest = numeric(length(time.temp))  
-#     for (i in 2:length(jumps)) {
-#       naest[ which(time.temp>=jumps[i-1] & time.temp<=jumps[i]) ] = 
-#         neglogsurv[i-1]   # snag the appropriate value
-#     }
-#     final.na.est[cluster==j] = naest
-#   }
-#   return(final.na.est)
-# }
-
 
 ################################# FUNCTION: IMPUTE #################################
 
-# data: raw dataset
-# method: "2l.norm.me" for Resche-Rigon's MICE-RE, "2l.norm" for MICE's native 2l.norm, or "pmm" for MICE default (primary analysis)
-
+#~~~~~~~~~~~~ TEST VERSION
 impute = function( .data, .method, .cluster.name, .na.name, .impute.with ) {
   # remove the variables that aren't needed for imputation
   # except keep the ones we need for modeling
   keep.in.data = c( .impute.with, "t", "t0", "d", "estim" )
   .data = .data[ , names(.data) %in% keep.in.data ]
   
-  cat("\nVariables in imputation data (not all used for imputation):")
-  print(names(.data))
+  imp=mice(.data)
   
-  # if using 2l.norm, put in the required constant term
-  if (.method == "2l.norm") .data$const=1
-  
-  # first fit normal MICE to get predictor matrix
-  ini = mice(.data, maxit = 0)
-  pred = ini$predictorMatrix
-  
-  # don't impute with these ones
-  # (most are already removed except for those needed for Cox model)
-  pred[, "t0"] = 0
-  pred[, "t"] = 0
-  
-  #LOG
-  cat("\nEntered impute function; finished dry run")
-  
-  # if not using default PMM, modify the predictor matrix to specify multilevel model
-  if (.method != "pmm") {
-    # treat trial as the cluster term
-    pred[ , .cluster.name] = -2
-    
-    # fixed effects for N-A estimator
-    pred[ , .na.name ] = 1
- 
-    # if using 2l.norm, code constant as random effect
-    if (.method=="2l.norm") pred[ , "const" ] = 2
-  }
-  
-  # change method based on user specification
-  method = ini$method; method[method == "pmm"] = .method
-  
-  # impute with specified method
-  imp = mice(.data, maxit = 0, pred = pred, method = method)
-  
-  #LOG
-  cat(imp$pred)
+  # print out pred matrix
+  cat("\n\nMethod is: ", i)
+  cat("\nPred matrix:\n")
+  print(imp$pred)
   
   return(imp)
 }
 
 
 
+# data: raw dataset
+# method: "2l.norm.me" for Resche-Rigon's MICE-RE, "2l.norm" for MICE's native 2l.norm, or "pmm" for MICE default (primary analysis)
+# 
+# impute = function( .data, .method, .cluster.name, .na.name, .impute.with ) {
+#   
+#   browser()
+#   # remove the variables that aren't needed for imputation
+#   # except keep the ones we need for modeling
+#   keep.in.data = c( .impute.with, "t", "t0", "d", "estim" )
+#   .data = .data[ , names(.data) %in% keep.in.data ]
+#   
+#   cat("\nVariables in imputation data (not all used for imputation):")
+#   print(names(.data))
+#   
+#   # if using 2l.norm, put in the required constant term
+#   if (.method == "2l.norm") .data$const=1
+#   
+#   # first fit normal MICE to get predictor matrix
+#   ini = mice(.data, maxit = 0)
+#   pred = ini$predictorMatrix
+#   
+#   # don't impute with these ones
+#   # (most are already removed except for those needed for Cox model)
+#   pred[, "t0"] = 0
+#   pred[, "t"] = 0
+#   
+#   #LOG
+#   cat("\nEntered impute function; finished dry run")
+#   
+#   # if not using default PMM, modify the predictor matrix to specify multilevel model
+#   if (.method != "pmm") {
+#     # treat trial as the cluster term
+#     pred[ , .cluster.name] = -2
+#     
+#     # fixed effects for N-A estimator
+#     pred[ , .na.name ] = 1
+#  
+#     # if using 2l.norm, code constant as random effect
+#     if (.method=="2l.norm") pred[ , "const" ] = 2
+#   }
+#   
+#   # change method based on user specification
+#   method = ini$method; method[method == "pmm"] = .method
+#   
+#   # impute with specified method
+#   imp = mice(.data, maxit = 0, pred = pred, method = method)
+#   
+#   #LOG
+#   cat(imp$pred)
+#   
+#   return(imp)
+# }
+
+
+################################# FUNCTIONS: GET COEFFICIENTS FROM COX MODELS #################################
 
 pooled_coxme_coefs = function(.coxme_object) {
   s = summary(.coxme_object)
-  #coefs = data.frame( t( s[,c("est", "se", "lo 95", "hi 95")] ) )
   coefs = data.frame( s[,c("est", "se", "lo 95", "hi 95")] )
   names(coefs) = row.names(s)  # use actual variable names
   return(coefs)

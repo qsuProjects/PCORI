@@ -149,8 +149,8 @@ p[[5]] =ggplot(m2, aes(x=var, y=mse.mean, color=method) ) + geom_point(size=poin
   coord_flip()
 
 
-setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/results/Version 4")
+setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/results")
 library(gridExtra)
-ggsave( paste(Sys.Date(), "simple_cov_results_version6.pdf", sep="_"),
+ggsave( paste(Sys.Date(), "simple_cov_results_version10.pdf", sep="_"),
         do.call("marrangeGrob", c(p,nrow=1,ncol=1) ), width=9, height=9 )
 
