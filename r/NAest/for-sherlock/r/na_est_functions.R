@@ -15,15 +15,6 @@
 #  2.) Must put in "ref" as the beta for one entry in categorical parameters matrix.
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# TO DO (10/9/15):
-# random censoring - done
-# impose missingness using Manisha's algorithm
-# add log-time*Z and log-time*X interactions to imp model - done
-# add CC analysis where entire S get kicked out - added, but not tested
-
-# change to fit Manisha's new scenario
-# split by survival time (on median)
-
 
 ############################## PACKAGES ##############################
 
@@ -34,58 +25,56 @@ library(data.table)
 
 
 ############################## LOCAL TEST ##############################
-
-write.path="~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test"
-file.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test/SURV_2015-08-01_simple_covs_dataset_1.csv"
-miss.matrix.hi.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/for-sherlock/missing_var_parameters_matrix_high_Y.csv"
-miss.matrix.lo.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/for-sherlock/missing_var_parameters_matrix_low_Y.csv"
-file.name="fake_file_name_2_@.csv"
-
-d = read.csv(file.path)
-
-# create variables for log-time interactions
-d$time.X = log(d$t) * d$X
-d$time.Z = log(d$t) * d$Z
-
-( miss.matrix.hi = read.csv(miss.matrix.hi.path) )
-( miss.matrix.lo = read.csv(miss.matrix.lo.path) )
-
-name.prefix = "dataset_2"
-
-time.name="t"
-event.name="d"
-cluster.name="id"
-cox.predictors = c("X")
-na.methods = c("complete.case", "complete.case.by.subj",
-               "naive", "frailty", "log-t", "full")  # misnomer because some of these don't involve an NA estimator (e.g., CC)
-
-impute.with = c("id", "X", "Z", "time.X", "time.Z", "Z", cox.predictors)
-
-#~~~~~~~~~ CHANGED 12/12
-#make.miss.if.contains="X"
-make.miss.if.contains=NULL
-
-
-do_one_dataset(.d=d, .source.file.name=file.name,
-               .miss.matrix.hi=miss.matrix.hi, 
-               .miss.matrix.lo=miss.matrix.lo,
-               .aux.matrix=aux.matrix,
-               .time.name=time.name,
-               .event.name=event.name, .cluster.name=cluster.name,
-               .cox.predictors=cox.predictors, .name.prefix=name.prefix,
-               .na.methods=na.methods, .write.path=write.path,
-               .impute.with = impute.with,
-               .make.miss.if.contains=make.miss.if.contains
-               #.p.censor = 0.2
-              )
-
-
-stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test",
-              "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test",
-              .name.prefix="results",
-              .stitch.file.name="stitched.csv"
-              )
-
+# # 
+# write.path="~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test"
+# file.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test/SURV_2015-08-01_simple_covs_dataset_1.csv"
+# miss.matrix.hi.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/for-sherlock/missing_var_parameters_matrix_high_Y.csv"
+# miss.matrix.lo.path = "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/for-sherlock/missing_var_parameters_matrix_low_Y.csv"
+# file.name="fake_file_name_2_@.csv"
+# 
+# d = read.csv(file.path)
+# 
+# # create variables for log-time interactions
+# d$time.X = log(d$t) * d$X
+# d$time.Z = log(d$t) * d$Z
+# 
+# ( miss.matrix.hi = read.csv(miss.matrix.hi.path) )
+# ( miss.matrix.lo = read.csv(miss.matrix.lo.path) )
+# 
+# name.prefix = "dataset_2"
+# 
+# time.name="t"
+# event.name="d"
+# cluster.name="id"
+# cox.predictors = c("X")
+# na.methods = c("complete.case", "complete.case.by.subj",
+#                "naive", "frailty", "log-t", "full", "no.time")  # misnomer because some of these don't involve an NA estimator (e.g., CC)
+# 
+# impute.with = c("id", "X", "Z", "time.X", "time.Z", "Z", cox.predictors)
+# 
+# #~~~~~~~~~ CHANGED 12/12
+# #make.miss.if.contains="X"
+# 
+# 
+# do_one_dataset(.d=d, .source.file.name=file.name,
+#                .miss.matrix.hi=miss.matrix.hi, 
+#                .miss.matrix.lo=miss.matrix.lo,
+#                .aux.matrix=aux.matrix,
+#                .time.name=time.name,
+#                .event.name=event.name, .cluster.name=cluster.name,
+#                .cox.predictors=cox.predictors, .name.prefix=name.prefix,
+#                .na.methods=na.methods, .write.path=write.path,
+#                .impute.with = impute.with,
+#                .make.miss.if.contains=make.miss.if.contains
+#               )
+# 
+# 
+# stitch_files( "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test",
+#               "~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/NAest/local-test",
+#               .name.prefix="results",
+#               .stitch.file.name="stitched.csv"
+#               )
+# 
 
 ############################## FUNCTION: DO ONE DATASET ##############################
 
@@ -129,6 +118,9 @@ do_one_dataset = function(.d, .source.file.name, .miss.matrix.hi, .miss.matrix.l
   d3 = missingify(d2, make.relateds.missing=FALSE, make.miss.if.contains=.make.miss.if.contains)
   
   for (i in .na.methods) {  # do once for each NA estimator method
+    
+    cat( "\n\nBeginning loop for method: ", i)
+    
     d4 = d3
     
     ##### Get NA Estimator ####
@@ -145,18 +137,17 @@ do_one_dataset = function(.d, .source.file.name, .miss.matrix.hi, .miss.matrix.l
         if (i == "log-t") d4$estim = log( d4[[.time.name]] )
         
         # log
-        cat( "\nFinished making estimator")
+        cat( "\n\nFinished making estimator for method: ", i)
 
-
-    ##### Impute Using NA Estimator ####
+    ##### Impute Using NA Estimator #####
         #if (!i %in% c("complete.case", "full") ) {  # unless doing a non-imputation approach
     
-        if (i %in% c("naive", "frailty", "log-t") ) {  # if using an imputation-based approach
+        if (i %in% c("naive", "frailty", "log-t", "no.time") ) {  # if using an imputation-based approach
           imp = impute(.data=d4, .method="pmm", .cluster.name="id", .na.name="estim", .impute.with)
           cat( "\nFinished imputing")
         }
  
-    ##### Fit Cox Frailty Model ####
+    ##### Fit Cox Frailty Model #####
         # formula is same regardless of method
         .coxme_formula <- paste0("Surv(t0, t, d) ~ ",
                                  paste0(.cox.predictors, collapse = " + "), " + (1|id) ")   
@@ -181,19 +172,20 @@ do_one_dataset = function(.d, .source.file.name, .miss.matrix.hi, .miss.matrix.l
         }
         
         # all imputation-based approaches get treated the same
-        if (i %in% c("naive", "frailty", "log-t")) {
+        if (i %in% c("naive", "frailty", "log-t", "no.time")) {
           rs1 = with( imp, coxme( as.formula(.coxme_formula) ) )
           rs2 = pool(rs1); print(rs2)
         coefs = pooled_coxme_coefs(.coxme_object=rs2)
       }
     
+    cat( "\n\nFinished imputing for method: ", i)
+    
+    ##### Export Useful Info About Dataset ####
     coefs$source.file = .source.file.name
     coefs$method = i
+    coefs$prop.rows.missing = sum(is.na(d4$X)) / length(d4$X)  # proportion of observations (NOT subjects) with missing X
+    coefs$XZ.corr = cor(.d$X, .d$Z)  # X-Z correlation in full data
     
-    # proportion of observations (NOT subjects) with missing X
-    coefs$prop.rows.missing = sum(is.na(d4$X)) / length(d4$X)
-    
-    # log
     cat( "\nFinished fitting Cox model")
 
     # write single-line file of results
@@ -229,6 +221,8 @@ calc_NA = function(.time.name, .event.name, .type, .cluster.name=NA, .data) {
   # Cox formula
   if (.type=="naive") RHS = "1"
   if (.type=="frailty") RHS = paste( "(1|", .cluster.name, ")" )
+  
+  # for censored data, simply use the binary event indicator for .event.name
   form = paste("Surv(", .time.name, ",", .event.name, ") ~", RHS, sep="")
   
   # get NA estimate from coxph
@@ -260,18 +254,19 @@ calc_NA = function(.time.name, .event.name, .type, .cluster.name=NA, .data) {
 
 ################################# FUNCTION: IMPUTE #################################
 
-#~~~~~~~~~~~~ TEST VERSION
 impute = function( .data, .method, .cluster.name, .na.name, .impute.with ) {
   # remove the variables that aren't needed for imputation
   # except keep the ones we need for modeling
-  keep.in.data = c( .impute.with, "t", "t0", "d", "estim" )
+  
+  keep.in.data = c( .impute.with, "t", "t0", "d", "estim" ) 
+  #keep.in.data = c( .impute.with, "t", "t0", "d", "estim" )  # FOR UNCENSORED VERSION
   .data = .data[ , names(.data) %in% keep.in.data ]
   
   imp=mice(.data)
   
   # print out pred matrix
-  cat("\n\nMethod is: ", i)
   cat("\nPred matrix:\n")
+  
   print(imp$pred)
   
   return(imp)
@@ -279,6 +274,7 @@ impute = function( .data, .method, .cluster.name, .na.name, .impute.with ) {
 
 
 
+# PREVIOUS VERSION OF IMPUTE FUNCTION THAT MICROMANAGES THE PRED MATRIX. 
 # data: raw dataset
 # method: "2l.norm.me" for Resche-Rigon's MICE-RE, "2l.norm" for MICE's native 2l.norm, or "pmm" for MICE default (primary analysis)
 # 
@@ -337,6 +333,7 @@ impute = function( .data, .method, .cluster.name, .na.name, .impute.with ) {
 
 pooled_coxme_coefs = function(.coxme_object) {
   s = summary(.coxme_object)
+  
   coefs = data.frame( s[,c("est", "se", "lo 95", "hi 95")] )
   names(coefs) = row.names(s)  # use actual variable names
   return(coefs)

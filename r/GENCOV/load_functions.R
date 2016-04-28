@@ -353,19 +353,19 @@ make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcor, cat.paramet
 ##### Function: longitudinally expand a matrix of single observations by subject
 # repeat each subject's entry in each row for obs number of times
 
-expand_matrix = function(matrix, obs) {
-
-  n = nrow(matrix)
-  expanded = matrix(c(NA), nrow = n*obs, ncol = ncol(matrix) )
-
-  for ( i in 1:nrow(expanded) ) {
-    for (j in 1:ncol(expanded) ) {
-      id = ceiling(i/obs)  # which subject id corresponds to the ith row in the expanded matrix?
-      expanded[i,j] = matrix[id,j]
-    }
-  }
-  print(expanded)
+expand_matrix = function(.matrix, .obs) {
+  library(plyr)
+  cat("Expanding a matrix\n")
+  
+  .n = nrow(.matrix)
+  .expanded = matrix(c(NA), nrow = .n*.obs, ncol = ncol(.matrix) )
+  
+  adply(.matrix, 1, function(..subject, ..obs) {
+    matrix(rep(..subject, ..obs), nrow = ..obs, byrow = TRUE)
+  }, .obs)
+  
 }
+
 
 # example
 #( mat = matrix( seq(1:10), nrow=2, byrow=F) )
@@ -392,10 +392,12 @@ add_dummy_vars = function(d2) {
   cd4_cat = recode(d2$log_cd4, "0:50='a.Under50'" )  # temporary!
 
   # dummy vln
-  vln_cat = recode(d2$log_vln, "0:400='a.Under400'; 400:3500='b.400to3500'; 3500:10000='c.3500to10K';
-                    10000:50000='d.10Kto50K'; 50000:300000='e.Over50K'")
+  # REMOVED FOR 2016-4-28 RUN
+#   vln_cat = recode(d2$log_vln, "0:400='a.Under400'; 400:3500='b.400to3500'; 3500:10000='c.3500to10K';
+#                     10000:50000='d.10Kto50K'; 50000:300000='e.Over50K'")
 
-  d3 = cbind(d2, age_cat, bmi_cat, vln_cat)
+  #d3 = cbind(d2, age_cat, bmi_cat, vln_cat)
+  d3 = cbind(d2, age_cat, bmi_cat)
 
   return(d3)
 }
