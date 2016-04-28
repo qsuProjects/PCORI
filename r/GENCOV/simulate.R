@@ -1,6 +1,5 @@
 
 ######################### RUN IN PARALLEL #########################
-# 12:08
 
 # load command line arguments
 args = commandArgs(trailingOnly = TRUE)

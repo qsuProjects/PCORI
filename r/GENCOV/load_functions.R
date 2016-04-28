@@ -348,8 +348,6 @@ make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcor, cat.paramet
 
 ######################### FUNCTION: LONGITUDINALLY EXPAND MATRIX #########################
 
-# ** MAKE MORE EFFICIENT**
-
 ##### Function: longitudinally expand a matrix of single observations by subject
 # repeat each subject's entry in each row for obs number of times
 
@@ -384,12 +382,13 @@ add_dummy_vars = function(d2) {
 
   # dummy code cd4
   # >500 is the reference category
-  #cd4_lt50 = as.numeric(d$cd4 < 50)
-  #cd4_50to100 = as.numeric(d$cd4 >= 50 & d$cd4 < 100)
-  #cd4_100to200 = as.numeric(d$cd4 >= 100 & d$cd4 < 200)
-  #cd4_200to350 = as.numeric(d$cd4 >= 200 & d$cd4 < 350)
-  #cd4_350to500 = as.numeric(d$cd4 >= 200 & d$cd4 < 350)
-  cd4_cat = recode(d2$log_cd4, "0:50='a.Under50'" )  # temporary!
+#   a.cd4_lt50 = as.numeric(d$cd4 < 50)
+#   b.cd4_50to100 = as.numeric(d$cd4 >= 50 & d$cd4 < 100)
+#   c.cd4_100to200 = as.numeric(d$cd4 >= 100 & d$cd4 < 200)
+#   d.cd4_200to350 = as.numeric(d$cd4 >= 200 & d$cd4 < 350)
+#   e.cd4_350to500 = as.numeric(d$cd4 >= 200 & d$cd4 < 350)
+  cd4_cat = recode(d2$log_cd4, "0:50='b.CD4.Under50'; 50:100='c.CD4.50to100'; 100:200='d.CD4.100to200';
+                   200:350='e.CD4.200to350'; 350:999='a.CD4.Above350';" )  # temporary!
 
   # dummy vln
   # REMOVED FOR 2016-4-28 RUN
