@@ -24,9 +24,6 @@ library(miscTools)
 library(car)
 library(plyr)
 
-# load jointly generate function
-# source("jointly_generate_binary_normal_modified_v2.R")
-
 
 ############################## FUNCTION: OVERRIDE DRUG PROBS ##############################
 
@@ -318,8 +315,10 @@ make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcor, cat.paramet
             as.character(parameters$name[parameters$type=="bin.drug"]))
   names(d2) = names
 
+  browser()
+  
   ### step 3.1 - dummy-code variables for race model
-  #d3 = add_dummy_vars(d2)
+  d3 = add_dummy_vars(d2)
   # the above function is specific to PCORI and isn't used in the general version of the code
 
   ### step 3.2 - add a single categorical variable ###

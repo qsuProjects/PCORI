@@ -72,25 +72,6 @@ one = 0.99
 
 
 
-######################### LOAD MATRICES AND PARAMETER DATAFRAME #########################
-
-#setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/GENCOV/vignettes")
-
-# within-subject correlation matrix
-#wcorin = read.csv("ex1_wcor.csv", header=FALSE)[-1,-1]
-#wcor = as.numeric(t(wcorin)[lower.tri(wcorin)]) #it gets read in by rows
-
-# population correlation matrix
-#pcorin = read.csv("ex1_pcor.csv", header=FALSE)[-1,-1]
-#pcor = as.numeric(t(pcorin)[lower.tri(pcorin, diag=F)]) # need to transpose and read in the lower half to convert the a matrix into vector by row
-
-# read in and complete parameters dataframe
-#parameters = complete_parameters( read.csv("ex1_parameters.csv"), .n.Subj )
-
-# parameters for categorical variable
-#cat.parameters = read.csv("ex1_categorical_parameters.csv")
-
-
 ######################### RACE MODEL COEFFICIENTS #########################
 
 # BELOW ARE THE OLD VERSIONS THAT WE USED UNTIL 2016-3-24
