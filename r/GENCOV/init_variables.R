@@ -62,14 +62,29 @@
 ######################### SET GLOBAL VARIABLES #########################
 
 # these will be constant for all simulations
-#n.Drugs = 15  # number of drugs
-#n.OtherBins = 1
-#n.OtherNorms = 9
+n.Drugs = 15  # number of drugs
+n.OtherBins = 1
+n.OtherNorms = 9
+n.Subj=2000
+obs=200
 race.names = c("white", "black", "other")
 
 zero = 0.000000000000000000000000001
 one = 0.99
 
+setwd("/share/PI/manishad/genCov")
+parameters = complete_parameters( read.csv("parameters_time_vary.csv"), n.Subj )
+
+# parameters for categorical variable
+cat.parameters = read.csv("pcori_categorical_parameters.csv")
+
+# within-subject correlation matrix
+wcor = read.csv("wcor_maya_time_vary.csv", header=FALSE)[-1,-1]
+#wcor = as.numeric(t(wcorin)[lower.tri(wcorin)]) #it gets read in by rows
+
+# population correlation matrix
+pcor = read.csv("pcor_time_vary.csv", header=TRUE)[,-1]
+#pcor = as.numeric(t(pcorin)[lower.tri(pcorin, diag=F)]) # need to transpose and read in the lower half to convert the a matrix into vector by row
 
 
 ######################### RACE MODEL COEFFICIENTS #########################

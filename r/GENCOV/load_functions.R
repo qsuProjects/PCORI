@@ -14,15 +14,17 @@
 #  2.) Must put in "ref" as the beta for one entry in categorical parameters matrix.
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+# 8:25 am
+
 ############################## LOAD PACKAGES ##############################
 
 # load packages
-library(MBESS)
-library(mvtnorm)
-library(ICC)
-library(miscTools)
-library(car)
-library(plyr)
+#library(MBESS)
+require(mvtnorm)
+require(ICC)
+require(miscTools)
+require(car)
+require(plyr)
 
 
 ############################## FUNCTION: OVERRIDE DRUG PROBS ##############################
@@ -122,7 +124,9 @@ make_one_linear_pred = function(m, data) {
 
 # d: the dataset without the categorical variable
 
-add_one_categorical = function(d, n, obs, cat.parameters) {
+add_one_categorical = function(.d, n, obs, cat.parameters) {
+  
+  #browser()
 
   # extract number of levels and names of levels
   n.levels = length( unique( cat.parameters$level ) )
@@ -134,7 +138,7 @@ add_one_categorical = function(d, n, obs, cat.parameters) {
   split = dlply( cat.parameters[ cat.parameters$beta != "ref", ], .(level) )
 
   # calculate exponentiated linear predictor for each race and put in dataframe
-  exp.lin.preds = as.data.frame( lapply( split, function(x) exp( make_one_linear_pred(x, d) ) ) )
+  exp.lin.preds = as.data.frame( lapply( split, function(x) exp( make_one_linear_pred(x, .d) ) ) )
 
   # make dataframe that will hold probabilities of being each level
   probs = as.data.frame( matrix( nrow=nrow(exp.lin.preds), ncol=n.levels ) )
@@ -152,15 +156,28 @@ add_one_categorical = function(d, n, obs, cat.parameters) {
 
   # for reference level (last column)
   probs[,n.levels] = 1 / denoms
+  
+  #if ( any( is.na(probs) ) ) browser()
 
   # generate the categorical variable
   obs = nrow(probs)
   cat.var = vector("list", obs)   # create vector of lists for each observation's indicators
-  for (j in 1:obs)  cat.var[[j]] = rmultinom(1, 1, probs[j,])
-  cat.var = t(do.call("cbind", cat.var))
-
+  #for (j in 1:obs)  cat.var[[j]] = rmultinom(1, 1, probs[j,])
+  #cat.var = t(do.call("cbind", cat.var))
+  
+  cat.var = lapply(X = 1:obs, FUN = lstyle, n = 1, size = 1, prob = probs)
+  cf <- data.frame(matrix(unlist(cat.var), nrow=length(cat.var), byrow=T))  # turn list into dataframe by row
+  names(cf) = row.names(cat.var[[1]])
+  
   # put new variables in dataframe
-  return( cbind(d, as.data.frame(cat.var) ) )
+  #if ( length(cat.var) != nrow(.d) ) browser()
+  return( cbind(.d, cf ) )
+}
+
+
+lstyle = function(x, n, size, prob){
+  #browser()
+  rmultinom(n, size, prob[x,])
 }
 
 #test - works :)
@@ -260,6 +277,8 @@ expand_subjects = function(mus3, n.OtherNorms, n.OtherBins, n.Drugs, wcor, obs, 
 # wcorin: within-subject correlation matrix
 
 make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcor, cat.parameters) {
+  
+  #browser()
 
   ### step 0.1 - extract parameter vectors from given dataframe
   bin.props = parameters$prop[ parameters$type == "bin.other" | parameters$type == "bin.drug" ]  # = bin.props
@@ -315,14 +334,15 @@ make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcor, cat.paramet
             as.character(parameters$name[parameters$type=="bin.drug"]))
   names(d2) = names
 
-  browser()
   
   ### step 3.1 - dummy-code variables for race model
   d3 = add_dummy_vars(d2)
   # the above function is specific to PCORI and isn't used in the general version of the code
 
+  #browser()
+  
   ### step 3.2 - add a single categorical variable ###
-  d3=d2
+  #d3=d2  # only use if NOT adding dummy variables above
   if (!is.null(cat.parameters)) d4 = add_one_categorical(d3, n, obs, cat.parameters)
   else d4 = d3
 
@@ -371,37 +391,51 @@ expand_matrix = function(.matrix, .obs) {
 
 ######################### FUNCTION: ADD DUMMY VARIABLES FOR USE IN RACE MODEL #########################
 
-add_dummy_vars = function(d2) {
 
+add_dummy_vars = function(d2) {
+  
   # dummy code age
   age_cat = recode(d2$age, "0:35='a.Under35'; 35:45='b.35to45'; 45:55='c.45to55'; 55:65='d.55to65'; 65:120='e.Over65'")
-
+  # below, hacky way to get dummy variable for the reference level
+  A = as.data.frame( model.matrix( ~ age_cat, d2)[,-1] ) # dummy variables matrix
+  string = paste( c("age_cat", levels(as.factor(age_cat))[1]), collapse="" )
+  A$fake = 1 - rowSums(A)
+  names(A)[names(A)=="fake"] = string
+  
   # dummy code bmi
   bmi_cat = recode(d2$bmi, "0:20='b.Under20'; 20:25='a.20to25'; 25:30='c.25to30'; 30:100='d.Over30'")
-
+  B = as.data.frame( model.matrix( ~ bmi_cat, d2)[,-1] )  # dummy variables matrix
+  string = paste( c("bmi_cat", levels(as.factor(bmi_cat))[1]), collapse="" )
+  B$fake = 1 - rowSums(B)
+  names(B)[names(B)=="fake"] = string
+  
   # dummy code cd4
-  # >500 is the reference category
-#   a.cd4_lt50 = as.numeric(d$cd4 < 50)
-#   b.cd4_50to100 = as.numeric(d$cd4 >= 50 & d$cd4 < 100)
-#   c.cd4_100to200 = as.numeric(d$cd4 >= 100 & d$cd4 < 200)
-#   d.cd4_200to350 = as.numeric(d$cd4 >= 200 & d$cd4 < 350)
-#   e.cd4_350to500 = as.numeric(d$cd4 >= 200 & d$cd4 < 350)
-  cd4_cat = recode(d2$log_cd4, "0:50='b.CD4.Under50'; 50:100='c.CD4.50to100'; 100:200='d.CD4.100to200';
-                   200:350='e.CD4.200to350'; 350:999='a.CD4.Above350';" )  # temporary!
-
+  cd4_cat = recode(d2$cd4, "-9999:50='b.CD4.Under50'; 50:100='c.CD4.50to100'; 100:200='d.CD4.100to200';
+                   200:350='e.CD4.200to350'; 350:9999='a.CD4.Above350';" )  
+  
+  C = as.data.frame( model.matrix( ~ cd4_cat, d2)[,-1] )  # dummy variables matrix
+  string = paste( c("cd4_cat", levels(as.factor(cd4_cat))[1]), collapse="" )
+  C$fake = 1 - rowSums(C)
+  names(C)[names(C)=="fake"] = string
+  
   # dummy vln
   # REMOVED FOR 2016-4-28 RUN
-#   vln_cat = recode(d2$log_vln, "0:400='a.Under400'; 400:3500='b.400to3500'; 3500:10000='c.3500to10K';
-#                     10000:50000='d.10Kto50K'; 50000:300000='e.Over50K'")
-
+  #   vln_cat = recode(d2$log_vln, "0:400='a.Under400'; 400:3500='b.400to3500'; 3500:10000='c.3500to10K';
+  #                     10000:50000='d.10Kto50K'; 50000:300000='e.Over50K'")
   #d3 = cbind(d2, age_cat, bmi_cat, vln_cat)
-  d3 = cbind(d2, age_cat, bmi_cat)
-
+  
+  d3 = cbind( d2, A, B, C )
+  
   return(d3)
 }
 
+# gives dummy variables, including one for the reference level
+my_model_matrix = function(var) {
+  M = model.matrix( ~ var)
+  levels(var)[1]
+}
 
-
+model.matrix( ~ warpbreaks$tension)[,-1]
 
 ######################### FUNCTION: CREATE PROPORTION-OF-TIME-ON-DRUG DATAFRAME #########################
 
@@ -593,7 +627,7 @@ dataset_performance = function(sim, n, obs, n.Drugs, n.OtherBins, n.OtherNorms,
 
 
 repeat_sim = function(n, obs, parameters, cat.parameters=NULL, prop.target = NULL, mean.target = NULL, n.Drugs,
-                       pcor, wcor, n.Reps, write.data=FALSE, write.perform=FALSE, name_prefix) {
+                       pcor, wcorin, race.names, n.Reps, write.data=FALSE, write.perform=FALSE, name_prefix) {
 
   #browser()
 
@@ -633,6 +667,7 @@ repeat_sim = function(n, obs, parameters, cat.parameters=NULL, prop.target = NUL
   ##### simulate data n.Reps times, adding each entry to results list #####
   for (i in 1:n.Reps) {
     sim = make_one_dataset(n, obs, parameters, n.Drugs, pcor, wcor, cat.parameters)
+    cat("\n\nMade dataset", i)
 
     # DATASET PERFORMANCE STUFF - NOT IN USE
     #newEntry = dataset_performance(sim, n, obs, n.Drugs, n.OtherBins, n.OtherNorms,
@@ -840,6 +875,7 @@ add_time_function_vars = function(d4, obs, parameters) {
   }
   return(d5)
 }
+
 
 
 

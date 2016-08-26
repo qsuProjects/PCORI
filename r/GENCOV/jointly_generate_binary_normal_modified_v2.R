@@ -4,9 +4,9 @@
 #data with specified marginal and association structures".
 
 #Load necessary libraries
-library(mvtnorm)
-library(corpcor)
-library(psych)
+require(mvtnorm)
+require(corpcor)
+require(psych)
 
 
 ###### Function: closest element ######

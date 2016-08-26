@@ -26,8 +26,9 @@ n.Drugs = as.numeric(args[6])
 
 
 # load required libraries
-library(plyr)
-library(doSNOW)
+require(plyr)
+require(doSNOW)
+require(car)
 
 #set up parallelization backend
 cl = makeCluster(n_clusters)
@@ -65,7 +66,7 @@ l_ply( c( 1:getDoParWorkers() ), .parallel=T, function(.item, .n.Subj, .obs, .n.
   #everything in here will be performed by workers in parallel    
   #packages and source functions used by workers should be loaded within the this block
   
-  # FOR SOME REASON THIS NEEDS TO BE SET GLOBALLY - WHY?
+  # FOR SOME REASON THIS NEEDS TO BE SET GLOBALLY - WHY? 
 	n=200
 
   setwd("/share/PI/manishad/genCov")
@@ -74,11 +75,14 @@ l_ply( c( 1:getDoParWorkers() ), .parallel=T, function(.item, .n.Subj, .obs, .n.
   source("init_variables.R", local=TRUE)
 
 	# DELETE THIS - testing only
-	#write.csv(.n.Subj, "n.Subj.csv")
+#write.csv(.n.Subj, "n.Subj.csv")
+#  write.csv(cat.parameters, "cat.parameters.csv")
   
   # simulate results
   setwd("/share/PI/manishad/genCov/datasets")
-  results = repeat_sim(n=.n.Subj, obs=.obs, parameters=parameters, prop.target=NULL,
+  results = repeat_sim(n=.n.Subj, obs=.obs, parameters=parameters, 
+                       cat.parameters = cat.parameters,
+                       prop.target=NULL,
                        mean.target=NULL, n.Drugs=.n.Drugs, 
                        pcor=pcor, wcorin=wcorin, n.Reps=.n.Reps,
                        race.names=race.names, write.data=TRUE,

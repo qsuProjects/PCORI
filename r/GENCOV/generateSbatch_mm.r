@@ -37,10 +37,12 @@ sbatch_skeleton <- function() {
 #SBATCH --cpus-per-task=CPUS_PER_TASK
 #now run normal batch commands
 
-ml load R
+module load R/3.2.2
 srun R -f PATH_TO_R_SCRIPT ARGS_TO_R_SCRIPT
 ")
 }
+
+# in above, just changed from module load R/3.0.2
 
 
 
@@ -179,8 +181,8 @@ generateSbatch <- function(sbatch_params, runfile_path = NA, run_now = F) {
 # EDIT THIS LINE EACH TIME
 n.files = 1000
 
-sbatch_params = data.frame(row)
-sbatch_params[2:n.files,] = row
+#sbatch_params = data.frame(row)
+#sbatch_params[2:n.files,] = row
 
 # EDIT THIS LINE EACH TIME
 path = "/share/PI/manishad/genCov"
@@ -195,7 +197,7 @@ runfile_path = paste(path, "/testRunFile.R", sep="")
 sbatch_params <- data.frame(jobname,
                     outfile,
                     errorfile,
-                    jobtime = "5:00:00",
+                    jobtime = "1:30:00",
                     quality = "normal",
                     node_number = 1,
                     mem_per_node = 64000,
@@ -209,14 +211,13 @@ sbatch_params <- data.frame(jobname,
                     stringsAsFactors = F,
                     server_sbatch_path = NA)
                     
-generateSbatch(sbatch_params, runfile_path)
-
+#generateSbatch(sbatch_params, runfile_path)
 
 
 # run them all
-# works
+#works
 setwd( paste(path, "/sbatch_files", sep="") )
 for (i in 1:n.files) {
-  system( paste("sbatch ", i, ".sbatch -p manishad", sep="") )
+  system( paste("sbatch -p manishad /share/PI/manishad/genCov/sbatch_files/", i, ".sbatch", sep="") )
 }
 
