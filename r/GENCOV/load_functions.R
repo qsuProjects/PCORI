@@ -14,8 +14,6 @@
 #  2.) Must put in "ref" as the beta for one entry in categorical parameters matrix.
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# 8:25 am
-
 ############################## LOAD PACKAGES ##############################
 
 # load packages
@@ -125,8 +123,6 @@ make_one_linear_pred = function(m, data) {
 # d: the dataset without the categorical variable
 
 add_one_categorical = function(.d, n, obs, cat.parameters) {
-  
-  #browser()
 
   # extract number of levels and names of levels
   n.levels = length( unique( cat.parameters$level ) )
@@ -156,8 +152,6 @@ add_one_categorical = function(.d, n, obs, cat.parameters) {
 
   # for reference level (last column)
   probs[,n.levels] = 1 / denoms
-  
-  #if ( any( is.na(probs) ) ) browser()
 
   # generate the categorical variable
   obs = nrow(probs)
@@ -277,8 +271,6 @@ expand_subjects = function(mus3, n.OtherNorms, n.OtherBins, n.Drugs, wcor, obs, 
 # wcorin: within-subject correlation matrix
 
 make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcor, cat.parameters) {
-  
-  #browser()
 
   ### step 0.1 - extract parameter vectors from given dataframe
   bin.props = parameters$prop[ parameters$type == "bin.other" | parameters$type == "bin.drug" ]  # = bin.props
@@ -292,7 +284,6 @@ make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcor, cat.paramet
   n.OtherNorms = n.NormVars - n.Drugs  # number of non-drug normal variables
   n.OtherBins = n.BinVars - n.Drugs  # number of non-drug binary variables
   n.Vars = n.OtherBins + n.OtherNorms + n.Drugs  # total number of variables in study (not double-counting drugs)
-
 
   ## step XX - convert population cor matrix into vectors to appease Demirtas function
   pcor.vec = upper_tri_vec(pcor)
@@ -339,8 +330,7 @@ make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcor, cat.paramet
   d3 = add_dummy_vars(d2)
   # the above function is specific to PCORI and isn't used in the general version of the code
 
-  #browser()
-  
+
   ### step 3.2 - add a single categorical variable ###
   #d3=d2  # only use if NOT adding dummy variables above
   if (!is.null(cat.parameters)) d4 = add_one_categorical(d3, n, obs, cat.parameters)
@@ -369,7 +359,6 @@ make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcor, cat.paramet
 
 ##### Function: longitudinally expand a matrix of single observations by subject
 # repeat each subject's entry in each row for obs number of times
-
 expand_matrix = function(.matrix, .obs) {
   library(plyr)
   cat("Expanding a matrix\n")
@@ -379,7 +368,7 @@ expand_matrix = function(.matrix, .obs) {
   
   adply(.matrix, 1, function(..subject, ..obs) {
     matrix(rep(..subject, ..obs), nrow = ..obs, byrow = TRUE)
-  }, .obs)
+  }, .obs)[ , -1]
   
 }
 
@@ -436,6 +425,7 @@ my_model_matrix = function(var) {
 }
 
 model.matrix( ~ warpbreaks$tension)[,-1]
+
 
 ######################### FUNCTION: CREATE PROPORTION-OF-TIME-ON-DRUG DATAFRAME #########################
 
