@@ -313,7 +313,6 @@ make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcor, cat.paramet
   mus3 = mus2
   mus3[ , (n.OtherBins + 1):(n.OtherBins + n.Drugs) ] = bins.prop
 
-
   ### step 2 - generate time-varying data for each person
   d1 = expand_subjects(mus3, n.OtherNorms, n.OtherBins, n.Drugs, wcor, obs)
 
@@ -321,10 +320,10 @@ make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcor, cat.paramet
   id = rep(1:n, each=obs)
   d2 = as.data.frame( cbind(id, d1, everUserExp) )
 
-  names = c( "id", as.character(parameters$name[parameters$type=="bin.other"]),
-             as.character(parameters$name[parameters$type=="subject.prop"]),
-            as.character(parameters$name[parameters$type %in% c("normal", "time.function")]),
-            as.character(parameters$name[parameters$type=="static.binary"]))
+  names = c( "id", as.character( parameters$name[ parameters$type=="static.binary" & parameters$is.drug.ever.var == 0 ] ),
+             as.character( parameters$name[ parameters$type=="subject.prop" ] ),
+            as.character( parameters$name[ parameters$type %in% c("normal", "time.function") ] ),
+            as.character( parameters$name[ parameters$is.drug.ever.var == 1 ] ) )
   names(d2) = names
 
   
@@ -643,6 +642,7 @@ repeat_sim = function(n, obs, parameters, cat.parameters=NULL, prop.target = NUL
   # find variable names that have the "_s" suffix as the last 2 characters
   is.drug.ever.var = vapply( var.names, FUN = function(x) substr( x, nchar(x)-1, nchar(x) ) == "_s", 
           FUN.VALUE = -99 )
+  parameters$is.drug.ever.var = is.drug.ever.var
   
   #### extract variable names from parameter matrix ####
   other.bin.names = parameters$name[ parameters$type=="static.binary" & is.drug.ever.var == 0 ]
@@ -668,7 +668,7 @@ repeat_sim = function(n, obs, parameters, cat.parameters=NULL, prop.target = NUL
 
   ##### simulate data n.Reps times, adding each entry to results list #####
   for (i in 1:n.Reps) {
-    sim = make_one_dataset(n, obs, parameters, n.Drugs, pcor, wcor, cat.parameters)
+    sim = make_one_dataset( n, obs, parameters, n.Drugs, pcor, wcor, cat.parameters, PCORI=PCORI )
     cat("\n\nMade dataset", i)
 
     # DATASET PERFORMANCE STUFF - NOT IN USE
