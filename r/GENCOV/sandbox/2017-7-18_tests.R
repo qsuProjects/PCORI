@@ -1,11 +1,15 @@
 
-
-
 ######################### LOAD FUNCTIONS #########################
 
-setwd("~/Dropbox/QSU/Mathur/PCORI/Git/PCORI/r/GENCOV")
-source("jointly_generate_binary_normal_modified_v2.R")
-source("load_functions.R")
+# for local use (MM)
+# setwd("~/Dropbox/QSU/Mathur/PCORI/Git/PCORI/r/GENCOV")
+# source("jointly_generate_binary_normal_modified_v2.R")
+# source("load_functions.R")
+
+# load directly from GitHub
+library(devtools)
+source_url("https://raw.githubusercontent.com/qsuProjects/PCORI/master/r/GENCOV/load_functions.R")
+source_url("https://raw.githubusercontent.com/qsuProjects/PCORI/master/r/GENCOV/jointly_generate_binary_normal_modified_v2.R")
 
 
 ######################### SET SIMULATION PARAMETERS #########################
@@ -57,6 +61,12 @@ head(d)
 
 
 ######################### QUICK TOUR THROUGH THE SIMULATED DATA ########################
+
+##### Example of Conditional Probabilty of Binary = 1 Given Ever-Use #####
+# these should match:
+mean( d$drug1[ d$drug1_s == 1] ); parameters$across.mean[ parameters$name == "drug1" ]
+mean( d$drug2[ d$drug2_s == 1] ); parameters$across.mean[ parameters$name == "drug2" ]
+
 
 ##### Example of Categorical Variable #####
 # refit the models that generated race
