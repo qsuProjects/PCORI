@@ -270,9 +270,9 @@ expand_subjects = function(mus3, n.OtherNorms, n.OtherBins, n.Drugs, wcor, obs, 
 # pcor: across-subject correlation matrix
 # wcorin: within-subject correlation matrix
 
-make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcor, cat.parameters) {
+make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcor, cat.parameters, PCORI) {
 
-
+  
   ### step 0.1 - extract parameter vectors from given dataframe
   bin.props = parameters$prop[ parameters$type == "static.binary" ] 
   nor.means = parameters$across.mean[ parameters$type %in% c("subject.prop", "normal", "time.function") ]  
@@ -329,7 +329,8 @@ make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcor, cat.paramet
 
   
   ### step 3.1 - dummy-code variables for race model
-  d3 = add_dummy_vars(d2)
+  if (PCORI) d3 = add_dummy_vars(d2)
+  else d3 = d2
   # the above function is specific to PCORI and isn't used in the general version of the code
 
 
@@ -617,11 +618,13 @@ dataset_performance = function(sim, n, obs, n.Drugs, n.OtherBins, n.OtherNorms,
 # race.names: names of races
 # write.data: should R write all the generated datasets to csv files?
 
+# name_prefix: prefix for dataset csv files
+# PCORI: are we running PCORI or general simulation? (controls whether add_dummy_vars is called)
+
 
 repeat_sim = function(n, obs, parameters, cat.parameters=NULL, prop.target = NULL, mean.target = NULL, n.Drugs,
-                       pcor, wcorin, race.names, n.Reps, write.data=FALSE, write.perform=FALSE, name_prefix) {
-
-  browser()
+                       pcor, wcorin, race.names, n.Reps, write.data=FALSE, write.perform=FALSE, name_prefix, 
+                      PCORI = FALSE ) {
 
   ##### check input #####
   if (n < 1) stop("Value provided for n is ridiculous! \n")
