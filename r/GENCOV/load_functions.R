@@ -247,7 +247,7 @@ expand_subjects = function(mus3, n.OtherNorms, n.OtherBins, n.Drugs, wcor, obs, 
     # create a list with a dataset (of length obs) for each subject
     dat[[s]] = mod.jointly.generate.binary.normal(no.rows=obs, no.bin=length(drugProbs), no.nor=length(normMeans),
                                                    prop.vec.bin=drugProbs, mean.vec.nor=normMeans,
-                                                   var.nor=parameters$within.var[parameters$type == "normal.other" |
+                                                   var.nor=parameters$within.var[parameters$type == "normal" |
                                                                                    parameters$type == "time.function"],
                                                    corr.vec=newwcorvec, adjust.corrs=T)
 
@@ -272,11 +272,13 @@ expand_subjects = function(mus3, n.OtherNorms, n.OtherBins, n.Drugs, wcor, obs, 
 
 make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcor, cat.parameters) {
 
+
   ### step 0.1 - extract parameter vectors from given dataframe
-  bin.props = parameters$prop[ parameters$type == "bin.other" | parameters$type == "bin.drug" ]  # = bin.props
-  nor.means = parameters$across.mean[ parameters$type %in% c("normal.drug", "normal.other", "time.function") ]  # = nor.means
-  across.vars = parameters$across.var[ parameters$type %in% c("normal.drug", "normal.other", "time.function") ]  # = across.vars
-  static.var.names = parameters$name[grep("static", parameters$type)]  # names of static variables
+  bin.props = parameters$prop[ parameters$type == "static.binary" ] 
+  nor.means = parameters$across.mean[ parameters$type %in% c("subject.prop", "normal", "time.function") ]  
+  across.vars = parameters$across.var[ parameters$type %in% c("subject.prop", "normal", "time.function") ]  
+  static.var.names = parameters$name[ grep("static", parameters$type) & parameters$type != "cat.static" ]  # names of static variables, but not categoricals
+  
 
   ### step 0.2 - number of different types of variables
   n.BinVars = length( bin.props )  # number binary variables (16)
@@ -285,7 +287,7 @@ make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcor, cat.paramet
   n.OtherBins = n.BinVars - n.Drugs  # number of non-drug binary variables
   n.Vars = n.OtherBins + n.OtherNorms + n.Drugs  # total number of variables in study (not double-counting drugs)
 
-  ## step XX - convert population cor matrix into vectors to appease Demirtas function
+  ## step 0.3 - convert population cor matrix into vectors to appease Demirtas function
   pcor.vec = upper_tri_vec(pcor)
 
   ### step 1.0 - generate mu for each person
@@ -307,7 +309,7 @@ make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcor, cat.paramet
 
   ### step 1.4 - "proportionize" normal drug variables (force them to be strictly between 0 and 1)
   bins = mus2[ , (n.OtherBins + 1):(n.OtherBins + n.Drugs) ]  # just binaries
-  bins.prop = proportionize(bins, zero, one)  # proportionized version of the binaries
+  bins.prop = proportionize(bins)  # proportionized version of the binaries
   mus3 = mus2
   mus3[ , (n.OtherBins + 1):(n.OtherBins + n.Drugs) ] = bins.prop
 
@@ -320,9 +322,9 @@ make_one_dataset = function(n, obs, parameters, n.Drugs, pcor, wcor, cat.paramet
   d2 = as.data.frame( cbind(id, d1, everUserExp) )
 
   names = c( "id", as.character(parameters$name[parameters$type=="bin.other"]),
-             as.character(parameters$name[parameters$type=="normal.drug"]),
-            as.character(parameters$name[parameters$type %in% c("normal.other", "time.function")]),
-            as.character(parameters$name[parameters$type=="bin.drug"]))
+             as.character(parameters$name[parameters$type=="subject.prop"]),
+            as.character(parameters$name[parameters$type %in% c("normal", "time.function")]),
+            as.character(parameters$name[parameters$type=="static.binary"]))
   names(d2) = names
 
   
@@ -619,24 +621,31 @@ dataset_performance = function(sim, n, obs, n.Drugs, n.OtherBins, n.OtherNorms,
 repeat_sim = function(n, obs, parameters, cat.parameters=NULL, prop.target = NULL, mean.target = NULL, n.Drugs,
                        pcor, wcorin, race.names, n.Reps, write.data=FALSE, write.perform=FALSE, name_prefix) {
 
-  #browser()
+  browser()
 
   ##### check input #####
-  #ridiculous = which( c(n, obs, n.Drugs) < 1 )
-
   if (n < 1) stop("Value provided for n is ridiculous! \n")
   if (obs < 1) stop("Value provided for obs is ridiculous! \n")
 
   ##### extract parameters from parameter matrix #####
-  bin.props = parameters$prop[parameters$type == "bin.other" | parameters$type == "bin.drug"]  # = bin.props
-  nor.means = parameters$across.mean[ parameters$type %in% c("normal.drug", "normal.other", "time.function") ]  # = nor.means
-  across.vars = parameters$across.var[ parameters$type %in% c("normal.drug", "normal.other", "time.function") ]  # = across.vars
+  bin.props = parameters$prop[ parameters$type == "static.binary" ]  
+  nor.means = parameters$across.mean[ parameters$type %in% c("subject.prop", "normal", "time.function") ]  
+  across.vars = parameters$across.var[ parameters$type %in% c("subject.prop", "normal", "time.function") ] 
 
+  #### determine which static binaries are "ever-use" variables ####
+  # we refer to as a "drug" any variable that has both a static ever-use indicator
+  #  and a time-varying indicator
+  var.names = as.character(p$name)
+
+  # find variable names that have the "_s" suffix as the last 2 characters
+  is.drug.ever.var = vapply( var.names, FUN = function(x) substr( x, nchar(x)-1, nchar(x) ) == "_s", 
+          FUN.VALUE = -99 )
+  
   #### extract variable names from parameter matrix ####
-  other.bin.names = parameters$name[parameters$type=="bin.other"]
-  normal.names = parameters$name[ parameters$type %in% c("normal.other", "time.function") ]
-  drug.ever.names = parameters$name[parameters$type=="bin.drug"]
-  drug.prop.names = parameters$name[parameters$type=="normal.drug"]
+  other.bin.names = parameters$name[ parameters$type=="static.binary" & is.drug.ever.var == 0 ]
+  normal.names = parameters$name[ parameters$type %in% c("normal", "time.function") ]
+  drug.ever.names = parameters$name[ is.drug.ever.var == 1 ]
+  drug.prop.names = parameters$name[parameters$type=="subject.prop"]
 
   ### if proportion and mean performance targets aren't set, use the parameters around which we're actually generating
   #if ( is.null(prop.target) ) prop.target=bin.props
@@ -798,14 +807,14 @@ make_result_list = function() {
 complete_parameters = function(parameters, n) {
 
   # calculate SDs for proportions based on sample size
-  parameters$across.SD[parameters$type=="normal.drug"] = sqrt( parameters$across.mean[parameters$type=="normal.drug"]
-                                                               * (1-parameters$across.mean[parameters$type=="normal.drug"]) / n )
+  parameters$across.SD[parameters$type=="subject.prop"] = sqrt( parameters$across.mean[parameters$type=="subject.prop"]
+                                                               * (1-parameters$across.mean[parameters$type=="subject.prop"]) / n )
   # calculate vars based on SDs
   parameters$across.var = parameters$across.SD ^ 2
 
   # ARBITRARILY SET WITHIN-S VARIANCE TO 1/3 OF ACROSS-S VARIANCE
   # MAKE THIS MORE GENERAL - HAVE AS ARGUMENT AND ONLY DO THIS IF IT'S EMPTY
-  var.index = parameters$type %in% c("normal.other", "time.function")  # index of variables to consider
+  var.index = parameters$type %in% c("normal", "time.function")  # index of variables to consider
   within.var.vector = parameters$within.var[var.index]
   across.var.vector = parameters$across.var[var.index]
   within.var.vector[ is.na(within.var.vector) ] = across.var.vector[ is.na(within.var.vector) ] / 3
