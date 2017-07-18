@@ -1,31 +1,11 @@
 
-######################### SET SIMULATION PARAMETERS #########################
-
-library(ggplot2)
-
-# source code from GitHub
-source_url("https://raw.githubusercontent.com/qsuProjects/PCORI/master/r/GENCOV/load_functions.R")
 
 
-# read in and complete parameters dataframe
+######################### LOAD FUNCTIONS #########################
 
-parameters = complete_parameters( read.csv("https://raw.githubusercontent.com/qsuProjects/PCORI/master/r/GENCOV/vignettes/ex1_parameters.csv"), n.Subj )
-
-
-parameters = complete_parameters( read.csv("ex1_parameters.csv"), n.Subj )
-
-cat.parameters = read.csv("ex1_categorical_parameters.csv")
-
-
-# within-subject correlation matrix
-wcor = read.csv("ex1_wcor.csv", header=FALSE)[-1,-1]
-
-# population correlation matrix
-pcor = read.csv("ex1_pcor.csv", header=TRUE)[,-1]
-
-setwd("~/Dropbox/QSU/Mathur/PCORI/PCORI_git/r/GENCOV")
-source("jointly_generate_binary_normal_modified_v2.R", local=TRUE)
-#source("load_functions.R", local=TRUE)
+setwd("~/Dropbox/QSU/Mathur/PCORI/Git/PCORI/r/GENCOV")
+source("jointly_generate_binary_normal_modified_v2.R")
+source("load_functions.R")
 
 
 ######################### SET SIMULATION PARAMETERS #########################
@@ -37,7 +17,7 @@ name_prefix = "ex1"
 n.Subj = 1000
 
 # obs (number of observations per subject)
-obs = 7
+obs = 10
 
 # n.Reps (number of datasets to generate)
 n.Reps = 1
@@ -46,16 +26,30 @@ n.Reps = 1
 n.Drugs = 2
 
 
+# use Vignette parameters
+setwd("~/Dropbox/QSU/Mathur/PCORI/Git/PCORI/r/GENCOV/vignettes")
+parameters = complete_parameters( read.csv("ex1_parameters.csv"), n.Subj )
+cat.parameters = read.csv("ex1_categorical_parameters.csv")
+
+
+# within-subject correlation matrix
+wcor = read.csv("ex1_wcor.csv", header=FALSE)[-1,-1]
+
+# population correlation matrix
+pcor = read.csv("ex1_pcor.csv", header=TRUE)[,-1]
+
+
+
 ######################### SIMULATE ########################
 
 # simulate results
 sim = repeat_sim(n=n.Subj, obs=obs, parameters=parameters, prop.target=NULL,
-                       mean.target=NULL, n.Drugs=n.Drugs, 
-                       pcor=pcor, wcor=wcor, n.Reps=n.Reps,
-                       write.data=TRUE,
-                       #name_prefix= paste( .name_prefix, WORKER.ID, sep="_" ),  # used with Sherlock
-                       name_prefix=name_prefix,
-                       cat.parameters=cat.parameters )
+                 mean.target=NULL, n.Drugs=n.Drugs, 
+                 pcor=pcor, wcor=wcor, n.Reps=n.Reps,
+                 write.data=TRUE,
+                 #name_prefix= paste( .name_prefix, WORKER.ID, sep="_" ),  # used with Sherlock
+                 name_prefix=name_prefix,
+                 cat.parameters=cat.parameters )
 
 # extract dataset
 d = sim$data
