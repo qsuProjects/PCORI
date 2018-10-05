@@ -145,7 +145,7 @@
 #'  the variable is equal to 1. (All other columns should be set to \code{NA}.) For example, this this row in
 #'  \code{parameters} could 
 #'  represent the proportion of observations for which an ever-user is currently taking the drug. To indicate
-#'  which pair of variables go together, the \code{subject.prop} should have the same name as the \code{static.binary}
+#'  which pair of variables go together, the \code{static.binary} should have the same name as the \code{subject.prop}
 #'  variable, but with the suffix \code{_s} appended (for example, the former could be named \code{drug_s} and
 #'  the latter \code{drug}).
 #'  
