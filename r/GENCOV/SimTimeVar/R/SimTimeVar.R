@@ -145,7 +145,7 @@
 #'  the variable is equal to 1. (All other columns should be set to \code{NA}.) For example, this this row in
 #'  \code{parameters} could 
 #'  represent the proportion of observations for which an ever-user is currently taking the drug. To indicate
-#'  which pair of variables go together, the \code{subject.prop} should have the same name as the \code{static.binary}
+#'  which pair of variables go together, the \code{static.binary} should have the same name as the \code{subject.prop}
 #'  variable, but with the suffix \code{_s} appended (for example, the former could be named \code{drug_s} and
 #'  the latter \code{drug}).
 #'  
@@ -194,8 +194,8 @@
 #' \strong{SPECIFYING THE WITHIN-CLUSTER CORRELATION MATRIX}
 #' 
 #' Matrix \code{wcor} specifies the within-cluster correlation matrix. The order of the variables listed in this file should be
-#' consistent with the order in \code{params} and \code{pcor}. However, \code{static.binary} and \code{subject.prop} variables
-#' should not be included in \code{wcor} since they are static within a cluster. Static continuous variables should be included,
+#' consistent with the order in \code{params} and \code{pcor}. However, \code{static.binary} variables
+#' should not be included in \code{wcor} since they are static within a cluster (see \code{params} for an example). Static continuous variables should be included,
 #' but all the correlations should be set to zero.
 #' 
 #' @import
